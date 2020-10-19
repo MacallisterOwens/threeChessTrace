@@ -108,6 +108,7 @@ public enum Position{
   public boolean evenParity(){
     return (row+column)%2==0;
   }
+
 }
 
 

@@ -427,4 +427,5 @@ public class Board implements Cloneable, Serializable {
     for(Colour c: Colour.values()) clone.captured.put(c, (ArrayList<Piece>) captured.get(c).clone());
     return clone;
   }
+
 }
