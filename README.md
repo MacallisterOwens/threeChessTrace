@@ -1,3 +1,3 @@
 # Tinkering
 
-Temporary branch to mess around in to get familiar and test ideas
+Branch used to develop a UCT-MCTS implementation for an artificial intelligence designed to play threeChess
