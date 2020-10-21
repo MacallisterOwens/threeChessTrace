@@ -43,6 +43,17 @@ public class GameTree {
         this.rootPlayer = player;
     }
 
+    /**
+    * Tree Init Constructor
+    * @param player the current turn for the root game state
+    **/
+   public GameTree(Colour player) {
+       this.root = new MCNode(null, null);
+       this.traversalNode = root;
+       this.traversalDepth = 0;
+       this.rootPlayer = player;
+   }
+
     //Getters and setters -------------------------------------------------------------------------------
 
     public Node getRoot() {return this.root;}
@@ -104,6 +115,7 @@ public class GameTree {
      **/
     public void pruneTree(Node newRoot) {
         this.root = newRoot;
+        this.rootPlayer = Colour.values()[(this.rootPlayer.ordinal() + 1) % 3];
     }
 
     /**
