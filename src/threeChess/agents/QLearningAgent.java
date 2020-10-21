@@ -27,17 +27,20 @@ class StateAction implements Serializable {
 }
 
 /**
- * @todo: Implement amInCheck, canPutOtherInCheck, update reward function to
- *        also check for center board control, piece mobility, and king saftey
- **/
+ * This class represents a learning agent utilizing Q-Learning to play
+ * three-person chess.
+ */
 public class QLearningAgent extends Agent {
 
     private static final String name = "Q-Learning Agent";
     private static final Random random = new Random();
 
-    private final String qTableStorage = "Q-Table-Storage"; // The name of the file storing the qTable object
-    private final String nTimesExecutedStorage = "n-Times-Executed-Storage"; // The name of the file storing the
-                                                                             // nTimesExecuted object
+    private final String qTableStorageBlue = "Q-Table-Storage-Blue"; // Q-Table-Storage file name for when the agent is BLUE
+    private final String nTimesExecutedStorageBlue = "n-Times-Executed-Storage-Blue"; // n-Times-Executed-Storage file name for when the agent is BLUE
+    private final String qTableStorageGreen = "Q-Table-Storage-Red-Green"; // Q-Table-Storage file name for when the agent is GREEN
+    private final String nTimesExecutedStorageGreen = "n-Times-Executed-Storage-Green"; // n-Times-Executed-Storage file name for when the agent is GREEN
+    private final String qTableStorageRed = "Q-Table-Storage-Red"; // Q-Table-Storage file name for when the agent is RED
+    private final String nTimesExecutedStorageRed = "n-Times-Executed-Storage-Red"; // n-Times-Executed-Storage file name for when the agent is RED
 
     private final double initLearningRate = 1.0; // The initial learning rate 1.0 == %100
     private final double dropChange = 0.95; // The change in the learning rate per drop
@@ -45,13 +48,11 @@ public class QLearningAgent extends Agent {
     private double epsilon = 1.0; // The probability in which we choose to utilize exploration vs exploitation
 
     Position[] myLastAction; // The last action *I* made
-    Position[] prevSAAction; // Previous state-action-value action/move
     Board prevBoardState; // The state of the board in the previous move
     Board curBoardState; // The state of the board as it currently is
-    double reward; // The reward of the previous action
-    double curReward; // The reward we get for being on the current state from last action
-    double prevRewardValue; // The value of our pieces + our taken pieces + board position from the prev
-                            // board state
+    double prevReward; // The adjusted (curRewardValue_t - prevRewardValue_t) reward of the previous action
+    double curReward; // The adjusted (curRewardValue_t-1 - prevRewardValue_t-1) reward we get for being on the current state from last action
+    double prevRewardValue; // The unadjusted (full reward) reward value of the previous action
 
     HashMap<Position, Double> pawnPV; // Maps the position on the board with a pawn's relative value on that position (Pawn Position Value)
     HashMap<Position, Double> knightPV; // Maps the position on the board with a knight's relative value on that position (Knight Position Value)
@@ -60,8 +61,8 @@ public class QLearningAgent extends Agent {
     HashMap<Position, Double> queenPV; // Maps the position on the board with a queen's relative value on that position (Queen Position Value)
     HashMap<Position, Double> kingPV; // Maps the position on the board with a king's relative value on that position (King Position Value)
 
-    boolean haveMoved;
-    Colour myColour;
+    boolean hasMoved; // whether we have made our first move in the game yet or not
+    Colour myColour; // My agent's colour/turn-identifier
 
     HashMap<StateAction, Double> qTable; // The mapping of every single state-action pair to its value
     HashMap<StateAction, Integer> nTimesExecuted; // The mapping of every single state-action pair to the number of
@@ -72,42 +73,50 @@ public class QLearningAgent extends Agent {
      **/
     public QLearningAgent() {
         myLastAction = new Position[] { null, null };
-        prevSAAction = new Position[] { null, null };
         prevBoardState = null;
         curBoardState = null;
-        reward = 0;
-        curReward = 0;
-        prevRewardValue = 0;
-        haveMoved = false;
+        prevReward = 0.0;
+        curReward = 0.0;
+        prevRewardValue = 0.0;
+        hasMoved = false;
+        myColour = null;
 
         qTable = new HashMap<StateAction, Double>();
         nTimesExecuted = new HashMap<StateAction, Integer>();
-
-        try {
-            FileInputStream qFileIn = new FileInputStream(qTableStorage);
-            ObjectInputStream qObjectIn = new ObjectInputStream(qFileIn);
-            qTable = (HashMap<StateAction, Double>) qObjectIn.readObject();
-            qFileIn.close();
-            qObjectIn.close();
-
-            FileInputStream nFileIn = new FileInputStream(nTimesExecutedStorage);
-            ObjectInputStream nObjectIn = new ObjectInputStream(nFileIn);
-            nTimesExecuted = (HashMap<StateAction, Integer>) nObjectIn.readObject();
-            nFileIn.close();
-            nObjectIn.close();
-        } catch (Exception e) {
-            System.out.println(e);
-            System.out.print("Q Table storage or n Times Executed Storage either do not exist or could not be opened.");
-        }
-
     }
 
     
      /* ------------------------------------------------------- Private Helper Functions -------------------------------------------------------*/
 
+    /**
+     * This function determines what color we are and loads/sets the correct data
+     * sets for the agent.
+     * 
+     * Note: the reason the data is hard coded in is because for the tourny the
+     * only file of ours being used is the {agent}.java file and no support/config
+     * files. I'm sorry to whoever decides to read through all of the piece-position
+     * value population.
+     **/
     private void init() {
         switch (myColour) {
             case BLUE:
+                try {
+                    FileInputStream qFileIn = new FileInputStream(qTableStorageBlue);
+                    ObjectInputStream qObjectIn = new ObjectInputStream(qFileIn);
+                    qTable = (HashMap<StateAction, Double>) qObjectIn.readObject();
+                    qFileIn.close();
+                    qObjectIn.close();
+    
+                    FileInputStream nFileIn = new FileInputStream(nTimesExecutedStorageBlue);
+                    ObjectInputStream nObjectIn = new ObjectInputStream(nFileIn);
+                    nTimesExecuted = (HashMap<StateAction, Integer>) nObjectIn.readObject();
+                    nFileIn.close();
+                    nObjectIn.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.print("Q Table storage or n Times Executed Storage either do not exist or could not be opened.");
+                }
+
                 pawnPV.put(Position.BA1, 0.0); pawnPV.put(Position.BA2, 2.0); pawnPV.put(Position.BA3, 2.0); pawnPV.put(Position.BA4, 0.0);
                 pawnPV.put(Position.BB1, 0.0); pawnPV.put(Position.BB2, 3.0); pawnPV.put(Position.BB3, -2.0); pawnPV.put(Position.BB4, 0.0);
                 pawnPV.put(Position.BC1, 0.0); pawnPV.put(Position.BC2, 3.0); pawnPV.put(Position.BC3, -2.0); pawnPV.put(Position.BC4, 0.0);
@@ -278,6 +287,23 @@ public class QLearningAgent extends Agent {
                 break;
 
             case RED:
+                try {
+                    FileInputStream qFileIn = new FileInputStream(qTableStorageRed);
+                    ObjectInputStream qObjectIn = new ObjectInputStream(qFileIn);
+                    qTable = (HashMap<StateAction, Double>) qObjectIn.readObject();
+                    qFileIn.close();
+                    qObjectIn.close();
+    
+                    FileInputStream nFileIn = new FileInputStream(nTimesExecutedStorageRed);
+                    ObjectInputStream nObjectIn = new ObjectInputStream(nFileIn);
+                    nTimesExecuted = (HashMap<StateAction, Integer>) nObjectIn.readObject();
+                    nFileIn.close();
+                    nObjectIn.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.print("Q Table storage or n Times Executed Storage either do not exist or could not be opened.");
+                }
+
                 pawnPV.put(Position.RA1, 0.0); pawnPV.put(Position.RA2, 2.0); pawnPV.put(Position.RA3, 2.0); pawnPV.put(Position.RA4, 0.0);
                 pawnPV.put(Position.RB1, 0.0); pawnPV.put(Position.RB2, 3.0); pawnPV.put(Position.RB3, -2.0); pawnPV.put(Position.RB4, 0.0);
                 pawnPV.put(Position.RC1, 0.0); pawnPV.put(Position.RC2, 3.0); pawnPV.put(Position.RC3, -2.0); pawnPV.put(Position.RC4, 0.0);
@@ -448,6 +474,23 @@ public class QLearningAgent extends Agent {
                 break;
 
             case GREEN:
+                try {
+                    FileInputStream qFileIn = new FileInputStream(qTableStorageGreen);
+                    ObjectInputStream qObjectIn = new ObjectInputStream(qFileIn);
+                    qTable = (HashMap<StateAction, Double>) qObjectIn.readObject();
+                    qFileIn.close();
+                    qObjectIn.close();
+    
+                    FileInputStream nFileIn = new FileInputStream(nTimesExecutedStorageGreen);
+                    ObjectInputStream nObjectIn = new ObjectInputStream(nFileIn);
+                    nTimesExecuted = (HashMap<StateAction, Integer>) nObjectIn.readObject();
+                    nFileIn.close();
+                    nObjectIn.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.print("Q Table storage or n Times Executed Storage either do not exist or could not be opened.");
+                }
+
                 pawnPV.put(Position.GA1, 0.0); pawnPV.put(Position.GA2, 2.0); pawnPV.put(Position.GA3, 2.0); pawnPV.put(Position.GA4, 0.0);
                 pawnPV.put(Position.GB1, 0.0); pawnPV.put(Position.GB2, 3.0); pawnPV.put(Position.GB3, -2.0); pawnPV.put(Position.GB4, 0.0);
                 pawnPV.put(Position.GC1, 0.0); pawnPV.put(Position.GC2, 3.0); pawnPV.put(Position.GC3, -2.0); pawnPV.put(Position.GC4, 0.0);
@@ -665,9 +708,9 @@ public class QLearningAgent extends Agent {
      * @param board The current board state
      * @return a HashMap mapping every pieces position to a set of valid moves
      */
-    private HashMap<Position, HashSet<Position[]>> getAllAvailableMoves(Board boardState) {
+    private HashMap<Position, HashSet<Position[]>> getAllAvailableMoves(Board boardState, Colour player) {
         HashMap<Position, HashSet<Position[]>> allMoves = new HashMap<Position, HashSet<Position[]>>();
-        for (Position pos : boardState.getPositions(boardState.getTurn())) {
+        for (Position pos : boardState.getPositions(player)) {
             allMoves.put(pos, getAvailableMoves(boardState, pos));
         }
         return allMoves;
@@ -703,8 +746,18 @@ public class QLearningAgent extends Agent {
         }
     }
 
+    /**
+     * This function takes in a board, finds all available moves the agent can make
+     * at that point in time and examines all of the state-action pairings, adding
+     * any new ones it finds to the q-Table and setting their values to be equal to
+     * 0. For each examined state-action pairing it will check it's Q-Table Value.
+     * Once examination is done it returns the highest q-Table Value found.
+     * 
+     * @param boardState the state of the board wishing to be examined
+     * @return the highest q-Table value found from the given board state
+     */
     private double argMaxQ(Board boardState) {
-        HashMap<Position, HashSet<Position[]>> availMoves = getAllAvailableMoves(boardState);
+        HashMap<Position, HashSet<Position[]>> availMoves = getAllAvailableMoves(boardState, myColour);
 
         double maxEstUtility = Double.MIN_VALUE;
 
@@ -739,42 +792,113 @@ public class QLearningAgent extends Agent {
             qTable.putIfAbsent(new StateAction(curBoardState, null), curReward);
         }
         if (prevBoardState != null) { // If we have already seen a previous state
-            StateAction curSA = new StateAction(prevBoardState, prevSAAction);
+            StateAction curSA = new StateAction(prevBoardState, myLastAction);
             double learningRate; // The learning rate to be used in the update function
             double curQValue; // The current Q value of curSA
-            if (nTimesExecuted.putIfAbsent(curSA, 1) != null) { // If curSA is in nTimesExecuted update the times its
-                                                                // been seen by one
+            if (nTimesExecuted.putIfAbsent(curSA, 1) != null) { // If curSA is in nTimesExecuted update the times its been executed by one
                 int nTimesSeen = nTimesExecuted.get(curSA) + 1;
                 nTimesExecuted.put(curSA, nTimesSeen);
                 learningRate = getLearningRate(nTimesSeen);
                 curQValue = qTable.get(curSA);
-                qTable.put(curSA, (curQValue + (learningRate * (reward + argMaxQ(curBoardState) - curQValue))));
+                qTable.put(curSA, (curQValue + (learningRate * (prevReward + argMaxQ(curBoardState) - curQValue))));
             } else { // Add curSA to the q-table
                 learningRate = getLearningRate(1);
-                qTable.put(curSA, (0.0 + (learningRate) * (reward + argMaxQ(curBoardState) - 0.0)));
+                qTable.put(curSA, (0.0 + (learningRate) * (prevReward + argMaxQ(curBoardState) - 0.0)));
             }
 
         }
     }
 
     /**
-     * Checks to see if we are currently under check
+     * Checks to see if we are currently under check and returns the negative value
+     * of it if we are. More weight given to those who can put us in check and move
+     * next turn.
      * 
-     * @return true if under check, otherwise false
+     * @param boardState the board in which we will exmaine
+     * @return negative value if under check, otherwise 0.0
      */
-    private boolean amUnderCheck() {
+    private double amUnderCheck(Board boardState) {
+        double soln = 0.0;
+        Position kingPos = null;
+        HashMap<Position, HashSet<Position[]>> availMoves = new HashMap<>();
+        for(Position pos : boardState.getPositions(myColour)) {
+            if(boardState.getPiece(pos).getType() == PieceType.KING) {
+                kingPos = pos;
+                break;
+            }
+        }
+        switch (myColour) {
+            case BLUE:
+                availMoves = getAllAvailableMoves(boardState, Colour.GREEN);
+                for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                    for (Position[] action : entry.getValue()) {
+                        if(action[1].equals(kingPos)) {
+                            soln -= 100.0;
+                        }
+                    }
+                }
+                availMoves = getAllAvailableMoves(boardState, Colour.RED);
+                for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                    for (Position[] action : entry.getValue()) {
+                        if(action[1].equals(kingPos)) {
+                            soln -= 35.0;
+                        }
+                    }
+                }
+                break;
 
-    }
+            case GREEN:
+                availMoves = getAllAvailableMoves(boardState, Colour.RED);
+                for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                    for (Position[] action : entry.getValue()) {
+                        if(action[1].equals(kingPos)) {
+                            soln -= 100.0;
+                        }
+                    }
+                }
+                availMoves = getAllAvailableMoves(boardState, Colour.BLUE);
+                for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                    for (Position[] action : entry.getValue()) {
+                        if(action[1].equals(kingPos)) {
+                            soln -= 35.0;
+                        }
+                    }
+                }
+                break;
 
-    /**
-     * Checks to see whether we can put an opponent in check
-     * 
-     * @return true if we can put an opponent in check, otherwise false
-     */
-    private boolean canPutOtherInCheck() {
-
+            case RED:
+                availMoves = getAllAvailableMoves(boardState, Colour.BLUE);
+                for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                    for (Position[] action : entry.getValue()) {
+                        if(action[1].equals(kingPos)) {
+                            soln -= 100.0;
+                        }
+                    }
+                }
+                availMoves = getAllAvailableMoves(boardState, Colour.GREEN);
+                for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                    for (Position[] action : entry.getValue()) {
+                        if(action[1].equals(kingPos)) {
+                            soln -= 35.0;
+                        }
+                    }
+                }
+                break;
+        
+            default:
+                break;
+        }
+        return soln;
     }
     
+    /**
+     * This function checks where every single one of the agent's pieces are on the
+     * board and sums up the value each piece has in its current position
+     * 
+     * @param boardState the board state in which to examine
+     * @return the cumulative positioning value of all the agent's pieces on the
+     *         board
+     */
     private double getPiecePositionValue(Board boardState) {
         HashSet<Position> positions = (HashSet<Position>) boardState.getPositions(myColour);
         double val = 0.0;
@@ -814,44 +938,142 @@ public class QLearningAgent extends Agent {
     }
 
     private double calculateCurrentReward() {
-        double curRewardValue = curBoardState.score(curBoardState.getTurn());
-        curRewardValue += getPiecePositionValue(curBoardState);
-
-        if (prevRewardValue == 0) {
-            prevRewardValue = prevBoardState.score(prevBoardState.getTurn());
-            prevRewardValue += getPiecePositionValue(prevBoardState);
-        }
-
+        double curRewardValue = curBoardState.score(myColour) + getPiecePositionValue(curBoardState) + amUnderCheck(curBoardState);
         double soln = curRewardValue - prevRewardValue;
         prevRewardValue = curRewardValue;
-
         return soln;
+    }
+
+    private void executeAction(Position[] action) {
+        myLastAction = action.clone();
+        try {
+            prevBoardState = (Board) curBoardState.clone(); 
+        } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+            System.out.println("Could not clone curBoardState");
+        }
+        prevReward = curReward;
+    }
+
+    private double quickUtilEstimate(Board board, Position[] action) {
+        double soln = 0.0;
+        try {
+            Board estBoard = (Board) board.clone(); 
+            estBoard.move(action[0], action[1], 0);
+            soln += curReward;
+            switch (board.getPiece(action[0]).getType()) {
+                case PAWN:
+                    soln -= pawnPV.get(action[0]);
+                    soln += pawnPV.get(action[1]);
+                    soln += amUnderCheck(estBoard);
+                    break;
+                
+                case KNIGHT:
+                    soln -= knightPV.get(action[0]);
+                    soln += knightPV.get(action[1]);
+                    soln += amUnderCheck(estBoard);
+                    break;
+
+                case BISHOP:
+                    soln -= bishopPV.get(action[0]);
+                    soln += bishopPV.get(action[1]);
+                    soln += amUnderCheck(estBoard);
+                    break;
+
+                case ROOK:
+                    soln -= rookPV.get(action[0]);
+                    soln += rookPV.get(action[1]);
+                    soln += amUnderCheck(estBoard);
+                    break;
+
+                case QUEEN:
+                    soln -= queenPV.get(action[0]);
+                    soln += queenPV.get(action[1]);
+                    soln += amUnderCheck(estBoard);
+                    break;
+
+                case KING:
+                    soln -= kingPV.get(action[0]);
+                    soln += kingPV.get(action[1]);
+                    soln += amUnderCheck(estBoard);
+                    break;
+            
+                default:
+                    break;
+            }
+            return soln;
+        } catch (CloneNotSupportedException | ImpossiblePositionException e) {
+            e.printStackTrace();
+            System.out.println("Could not clone board");
+            return soln;
+        }
     }
 
     /**
      * Writes the qTable to the file qTableStorage and writes nTimesExecuted to the
      * file nTimesExecutedStorage
-     * 
-     * @return true if sucessful write, otherwise false
      */
-    private boolean storeData() {
-        try {
-            FileOutputStream qFileOut = new FileOutputStream(qTableStorage);
-            ObjectOutputStream qObjectOut = new ObjectOutputStream(qFileOut);
-            qObjectOut.writeObject(qTable);
-            qFileOut.close();
-            qObjectOut.close();
+    private void storeData() {
+        switch (myColour) {
+            case BLUE:
+                try {
+                    FileOutputStream qFileOut = new FileOutputStream(qTableStorageBlue);
+                    ObjectOutputStream qObjectOut = new ObjectOutputStream(qFileOut);
+                    qObjectOut.writeObject(qTable);
+                    qFileOut.close();
+                    qObjectOut.close();
+    
+                    FileOutputStream nFileOut = new FileOutputStream(nTimesExecutedStorageBlue);
+                    ObjectOutputStream nObjectOut = new ObjectOutputStream(nFileOut);
+                    nObjectOut.writeObject(nTimesExecuted);
+                    nFileOut.close();
+                    nObjectOut.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.print("Q Table storage or n Times Executed Storage could not be written to disk.");
+                }
+                break;
 
-            FileOutputStream nFileOut = new FileOutputStream(nTimesExecutedStorage);
-            ObjectOutputStream nObjectOut = new ObjectOutputStream(nFileOut);
-            qObjectOut.writeObject(nTimesExecuted);
-            nFileOut.close();
-            nObjectOut.close();
-            return true;
-        } catch (Exception e) {
-            System.out.println(e);
-            System.out.print("Q Table storage or n Times Executed Storage could not be written to disk.");
-            return false;
+            case GREEN:
+                try {
+                    FileOutputStream qFileOut = new FileOutputStream(qTableStorageGreen);
+                    ObjectOutputStream qObjectOut = new ObjectOutputStream(qFileOut);
+                    qObjectOut.writeObject(qTable);
+                    qFileOut.close();
+                    qObjectOut.close();
+    
+                    FileOutputStream nFileOut = new FileOutputStream(nTimesExecutedStorageGreen);
+                    ObjectOutputStream nObjectOut = new ObjectOutputStream(nFileOut);
+                    nObjectOut.writeObject(nTimesExecuted);
+                    nFileOut.close();
+                    nObjectOut.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.print("Q Table storage or n Times Executed Storage could not be written to disk.");
+                }
+                break;
+
+            case RED:
+                try {
+                    FileOutputStream qFileOut = new FileOutputStream(qTableStorageRed);
+                    ObjectOutputStream qObjectOut = new ObjectOutputStream(qFileOut);
+                    qObjectOut.writeObject(qTable);
+                    qFileOut.close();
+                    qObjectOut.close();
+    
+                    FileOutputStream nFileOut = new FileOutputStream(nTimesExecutedStorageRed);
+                    ObjectOutputStream nObjectOut = new ObjectOutputStream(nFileOut);
+                    nObjectOut.writeObject(nTimesExecuted);
+                    nFileOut.close();
+                    nObjectOut.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.print("Q Table storage or n Times Executed Storage could not be written to disk.");
+                }
+                break;
+        
+            default:
+                break;
         }
     }
 
@@ -869,8 +1091,8 @@ public class QLearningAgent extends Agent {
      *         is the position to move that piece to.
      **/
     public Position[] playMove(Board board) {
-        if (!haveMoved) {
-            haveMoved = true;
+        if (!hasMoved) {
+            hasMoved = true;
             myColour = board.getTurn();
             init();
         }
@@ -881,10 +1103,10 @@ public class QLearningAgent extends Agent {
             return null;
         }
 
-        Position[] maxAction = new Position[2];
+        Position[] chosenAction = new Position[2];
         double maxEstUtility = Double.MIN_VALUE;
 
-        HashMap<Position, HashSet<Position[]>> availMoves = getAllAvailableMoves(board);
+        HashMap<Position, HashSet<Position[]>> availMoves = getAllAvailableMoves(board, myColour);
 
         if(shouldExplore()) { // If I should explore choose the state-action pair with the lowest visits, or if there is a state we haven't explored immediately choose that
             int lowestVisitedSA = Integer.MAX_VALUE;
@@ -892,45 +1114,57 @@ public class QLearningAgent extends Agent {
                 HashSet<Position[]> pieceMoves = entry.getValue();
                 for (Position[] action : pieceMoves) {
                     StateAction curExaminedSA = new StateAction(board, action);
-                    if (nTimesExecuted.containsKey(curExaminedSA)) { // If we have seen the state-action pair already check times executed
-                        if(nTimesExecuted.get(curExaminedSA) == 0) {
-                            // Proceed using this state-action
+                    if (nTimesExecuted.containsKey(curExaminedSA)) { // We have seen the state-action pair already
+                        if(nTimesExecuted.get(curExaminedSA) == 0) { // Proceed using this state-action
+                            executeAction(action);
+                            storeData();
+                            return action;
                         } else if(nTimesExecuted.get(curExaminedSA) < lowestVisitedSA) {
                             lowestVisitedSA = nTimesExecuted.get(curExaminedSA);
+                            chosenAction = action.clone();
                         }
                     } else { // Add the new state-action pair to the q-table and set its value to 0
                         qTable.put(curExaminedSA, 0.0);
                         nTimesExecuted.put(curExaminedSA, 0);
                         // Proceed using this state-action pair
+                        executeAction(action);
+                        storeData();
+                        return action;
                     }
                 }
             }
+            executeAction(chosenAction);
+            storeData();
+            return chosenAction;
         } else { // Just do it normally, be greedy and take the state-action pair that has the highest utility/value/reward
             for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
                 HashSet<Position[]> pieceMoves = entry.getValue();
                 for (Position[] action : pieceMoves) {
                     StateAction curExaminedSA = new StateAction(board, action);
-                    if (nTimesExecuted.containsKey(curExaminedSA)) { // If we have seen the state-action pair already set utility is its value
-                        if (qTable.get(curExaminedSA) > maxEstUtility) { // Double check when more awake
-                            maxEstUtility = qTable.get(curExaminedSA);
-                            maxAction = action;
+                    if (nTimesExecuted.containsKey(curExaminedSA)) { // We have seen the state-action pair already set utility as its value
+                        double estUtil = qTable.get(curExaminedSA);
+                        if(estUtil == 0) {
+                            estUtil = quickUtilEstimate(board, action);
+                        }
+                        if (estUtil > maxEstUtility) { // Double check when more awake
+                            maxEstUtility = estUtil;
+                            chosenAction = action;
                         }
                     } else { // Add the new state-action pair to the q-table and set its value to 0
                         qTable.put(curExaminedSA, 0.0);
                         nTimesExecuted.put(curExaminedSA, 0);
-                        if(0.0 > maxEstUtility) { // check when more awake
-                            maxEstUtility = 0.0;
-                            maxAction = action;
+                        double estUtil = quickUtilEstimate(board, action);
+                        if(estUtil > maxEstUtility) { // check when more awake
+                            maxEstUtility = estUtil;
+                            chosenAction = action;
                         }
                     }
                 }
             }
+            executeAction(chosenAction);
+            storeData();
+            return chosenAction;
         }
-
-        // Do post process stuff i.e. update all prev values and such
-        // Write relevant stuff to storage
-
-        return maxAction;
     }
 
     /**
