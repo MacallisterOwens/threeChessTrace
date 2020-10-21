@@ -96,10 +96,26 @@ public class GameTree {
     //MCTS Methods ----------------------------------------------------------------------------------------
     
     /**
-     * Given the current tree, select a leaf node to expand
-     * Choose successive child nodes by applying the UCT formula at each step
+     * Returns a child node of the current traversal node
+     * The child is chosen based on its UCT score
+     * @return the move linking the traversal node to the child node with the highest UCT score
+     * @throws NullPointerException if the traversalNode has no children (i.e. is a leaf node)
      */
-    private void selection() {
+    public Position[] uctSelectChild() {
+
+        if (this.traversalNode.isLeaf()) throw new IllegalArgumentException("Traversal node is leaf, cannot get best UCT child");
+
+        double maxUCT = 0.0;
+        Position[] bestMove = null;
+
+        for (MCNode child : this.traversalNode.getChildren()) {
+            if (child.getUCT() > maxUCT) {
+                maxUCT = child.getUCT();
+                bestMove = child.getMove();
+            }
+        }
+
+        return bestMove;
 
     }
 
