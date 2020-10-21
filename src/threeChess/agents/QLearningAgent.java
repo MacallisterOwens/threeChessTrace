@@ -57,18 +57,12 @@ public class QLearningAgent extends Agent {
     double prevRewardValue; // The value of our pieces + our taken pieces + board position from the prev
                             // board state
 
-    HashMap<Position, Double> pawnPositionValue; // Maps the position on the board with a pawn's relative value on that
-                                                 // position
-    HashMap<Position, Double> knightPositionValue; // Maps the position on the board with a knight's relative value on
-                                                   // that position
-    HashMap<Position, Double> bishopPositionValue; // Maps the position on the board with a bishop's relative value on
-                                                   // that position
-    HashMap<Position, Double> rookPositionValue; // Maps the position on the board with a rook's relative value on that
-                                                 // position
-    HashMap<Position, Double> queenPositionValue; // Maps the position on the board with a queen's relative value on
-                                                  // that position
-    HashMap<Position, Double> kingPositionValue; // Maps the position on the board with a king's relative value on that
-                                                 // position
+    HashMap<Position, Double> pawnPV; // Maps the position on the board with a pawn's relative value on that position (Pawn Position Value)
+    HashMap<Position, Double> knightPV; // Maps the position on the board with a knight's relative value on that position (Knight Position Value)
+    HashMap<Position, Double> bishopPV; // Maps the position on the board with a bishop's relative value on that position (Bishop Position Value)
+    HashMap<Position, Double> rookPV; // Maps the position on the board with a rook's relative value on that position (Rook Position Value)
+    HashMap<Position, Double> queenPV; // Maps the position on the board with a queen's relative value on that position (Queen Position Value)
+    HashMap<Position, Double> kingPV; // Maps the position on the board with a king's relative value on that position (King Position Value)
 
     boolean haveMoved;
     Colour myColour;
@@ -112,128 +106,523 @@ public class QLearningAgent extends Agent {
 
     }
 
-    /*
-     * ------------------------------------------------------- Private Helper
-     * Functions -------------------------------------------------------
-     */
+    
+     /* ------------------------------------------------------- Private Helper Functions -------------------------------------------------------*/
 
     private void init() {
         switch (myColour) {
             case BLUE:
-                pawnPositionValue.put(Position.BA1, 0.0); pawnPositionValue.put(Position.BA2, 2.0);
-                pawnPositionValue.put(Position.BA3, 2.0); pawnPositionValue.put(Position.BA4, 0.0);
-                pawnPositionValue.put(Position.BB1, 0.0); pawnPositionValue.put(Position.BB2, 3.0);
-                pawnPositionValue.put(Position.BB3, -2.0); pawnPositionValue.put(Position.BB4, 0.0);
-                pawnPositionValue.put(Position.BC1, 0.0); pawnPositionValue.put(Position.BC2, 3.0);
-                pawnPositionValue.put(Position.BC3, -2.0); pawnPositionValue.put(Position.BC4, 0.0);
-                pawnPositionValue.put(Position.BD1, 0.0); pawnPositionValue.put(Position.BD2, -3.5);
-                pawnPositionValue.put(Position.BD3, 0.0); pawnPositionValue.put(Position.BD4, 4.5);
-                pawnPositionValue.put(Position.BE1, 0.0); pawnPositionValue.put(Position.BE2, -3.5);
-                pawnPositionValue.put(Position.BE3, 0.0); pawnPositionValue.put(Position.BE4, 4.5);
-                pawnPositionValue.put(Position.BF1, 0.0); pawnPositionValue.put(Position.BF2, 3.0);
-                pawnPositionValue.put(Position.BF3, -2.0); pawnPositionValue.put(Position.BF4, 0.0);
-                pawnPositionValue.put(Position.BG1, 0.0); pawnPositionValue.put(Position.BG2, 3.0);
-                pawnPositionValue.put(Position.BG3, -2.0); pawnPositionValue.put(Position.BG4, 0.0);
-                pawnPositionValue.put(Position.BH1, 0.0); pawnPositionValue.put(Position.BH2, 2.0);
-                pawnPositionValue.put(Position.BH3, 2.0); pawnPositionValue.put(Position.BH4, 0.0);
+                pawnPV.put(Position.BA1, 0.0); pawnPV.put(Position.BA2, 2.0); pawnPV.put(Position.BA3, 2.0); pawnPV.put(Position.BA4, 0.0);
+                pawnPV.put(Position.BB1, 0.0); pawnPV.put(Position.BB2, 3.0); pawnPV.put(Position.BB3, -2.0); pawnPV.put(Position.BB4, 0.0);
+                pawnPV.put(Position.BC1, 0.0); pawnPV.put(Position.BC2, 3.0); pawnPV.put(Position.BC3, -2.0); pawnPV.put(Position.BC4, 0.0);
+                pawnPV.put(Position.BD1, 0.0); pawnPV.put(Position.BD2, -3.5); pawnPV.put(Position.BD3, 0.0); pawnPV.put(Position.BD4, 4.5);
+                pawnPV.put(Position.BE1, 0.0); pawnPV.put(Position.BE2, -3.5); pawnPV.put(Position.BE3, 0.0); pawnPV.put(Position.BE4, 4.5);
+                pawnPV.put(Position.BF1, 0.0); pawnPV.put(Position.BF2, 3.0); pawnPV.put(Position.BF3, -2.0); pawnPV.put(Position.BF4, 0.0);
+                pawnPV.put(Position.BG1, 0.0); pawnPV.put(Position.BG2, 3.0); pawnPV.put(Position.BG3, -2.0); pawnPV.put(Position.BG4, 0.0);
+                pawnPV.put(Position.BH1, 0.0); pawnPV.put(Position.BH2, 2.0); pawnPV.put(Position.BH3, 2.0); pawnPV.put(Position.BH4, 0.0);
 
-                pawnPositionValue.put(Position.GH4, 2.0); pawnPositionValue.put(Position.GH3, 2.5);
-                pawnPositionValue.put(Position.GH2, 4.0); pawnPositionValue.put(Position.GH1, 4.2);
-                pawnPositionValue.put(Position.GG4, 2.0); pawnPositionValue.put(Position.GG3, 2.5);
-                pawnPositionValue.put(Position.GG2, 4.0); pawnPositionValue.put(Position.GG1, 4.2);
-                pawnPositionValue.put(Position.GF4, 2.0); pawnPositionValue.put(Position.GF3, 2.7);
-                pawnPositionValue.put(Position.GF2, 4.0); pawnPositionValue.put(Position.GF1, 4.2);
-                pawnPositionValue.put(Position.GE4, 2.0); pawnPositionValue.put(Position.GE3, 3.0);
-                pawnPositionValue.put(Position.GE2, 4.0); pawnPositionValue.put(Position.GE1, 4.2);
-                pawnPositionValue.put(Position.GD4, 2.0); pawnPositionValue.put(Position.GD3, 2.5);
-                pawnPositionValue.put(Position.GD2, 4.0); pawnPositionValue.put(Position.GD1, 4.2);
-                pawnPositionValue.put(Position.GC4, 2.0); pawnPositionValue.put(Position.GC3, 2.7);
-                pawnPositionValue.put(Position.GC2, 4.0); pawnPositionValue.put(Position.GC1, 4.2);
-                pawnPositionValue.put(Position.GB4, 2.0); pawnPositionValue.put(Position.GB3, 2.5);
-                pawnPositionValue.put(Position.GB2, 4.0); pawnPositionValue.put(Position.GB1, 4.2);
-                pawnPositionValue.put(Position.GA4, 2.0); pawnPositionValue.put(Position.GA3, 2.5);
-                pawnPositionValue.put(Position.GA2, 4.0); pawnPositionValue.put(Position.GA1, 4.2);
+                pawnPV.put(Position.GH4, 2.0); pawnPV.put(Position.GH3, 2.5); pawnPV.put(Position.GH2, 4.0); pawnPV.put(Position.GH1, 4.2);
+                pawnPV.put(Position.GG4, 2.0); pawnPV.put(Position.GG3, 2.5); pawnPV.put(Position.GG2, 4.0); pawnPV.put(Position.GG1, 4.2);
+                pawnPV.put(Position.GF4, 2.0); pawnPV.put(Position.GF3, 2.7); pawnPV.put(Position.GF2, 4.0); pawnPV.put(Position.GF1, 4.2);
+                pawnPV.put(Position.GE4, 2.0); pawnPV.put(Position.GE3, 3.0); pawnPV.put(Position.GE2, 4.0); pawnPV.put(Position.GE1, 4.2);
+                pawnPV.put(Position.GD4, 2.0); pawnPV.put(Position.GD3, 2.5); pawnPV.put(Position.GD2, 4.0); pawnPV.put(Position.GD1, 4.2);
+                pawnPV.put(Position.GC4, 2.0); pawnPV.put(Position.GC3, 2.7); pawnPV.put(Position.GC2, 4.0); pawnPV.put(Position.GC1, 4.2);
+                pawnPV.put(Position.GB4, 2.0); pawnPV.put(Position.GB3, 2.5); pawnPV.put(Position.GB2, 4.0); pawnPV.put(Position.GB1, 4.2);
+                pawnPV.put(Position.GA4, 2.0); pawnPV.put(Position.GA3, 2.5); pawnPV.put(Position.GA2, 4.0); pawnPV.put(Position.GA1, 4.2);
 
-                pawnPositionValue.put(Position.RH4, 2.0); pawnPositionValue.put(Position.RH3, 2.5);
-                pawnPositionValue.put(Position.RH2, 4.0); pawnPositionValue.put(Position.RH1, 4.2);
-                pawnPositionValue.put(Position.RH4, 2.0); pawnPositionValue.put(Position.RG3, 2.5);
-                pawnPositionValue.put(Position.RG2, 4.0); pawnPositionValue.put(Position.RG1, 4.2);
-                pawnPositionValue.put(Position.RF4, 2.0); pawnPositionValue.put(Position.RF3, 2.7);
-                pawnPositionValue.put(Position.RF2, 4.0); pawnPositionValue.put(Position.RF1, 4.2);
-                pawnPositionValue.put(Position.RE4, 2.0); pawnPositionValue.put(Position.RE3, 3.0);
-                pawnPositionValue.put(Position.RE2, 4.0); pawnPositionValue.put(Position.RE1, 4.2);
-                pawnPositionValue.put(Position.RD4, 2.0); pawnPositionValue.put(Position.RD3, 2.5);
-                pawnPositionValue.put(Position.RD2, 4.0); pawnPositionValue.put(Position.RD1, 4.2);
-                pawnPositionValue.put(Position.RC4, 2.0); pawnPositionValue.put(Position.RC3, 2.7);
-                pawnPositionValue.put(Position.RC2, 4.0); pawnPositionValue.put(Position.RC1, 4.2);
-                pawnPositionValue.put(Position.RB4, 2.0); pawnPositionValue.put(Position.RB3, 2.5);
-                pawnPositionValue.put(Position.RB2, 4.0); pawnPositionValue.put(Position.RB1, 4.2);
-                pawnPositionValue.put(Position.RA4, 2.0); pawnPositionValue.put(Position.RA3, 2.5);
-                pawnPositionValue.put(Position.RA2, 4.0); pawnPositionValue.put(Position.RA1, 4.2);
+                pawnPV.put(Position.RH4, 2.0); pawnPV.put(Position.RH3, 2.5); pawnPV.put(Position.RH2, 4.0); pawnPV.put(Position.RH1, 4.2);
+                pawnPV.put(Position.RH4, 2.0); pawnPV.put(Position.RG3, 2.5); pawnPV.put(Position.RG2, 4.0); pawnPV.put(Position.RG1, 4.2);
+                pawnPV.put(Position.RF4, 2.0); pawnPV.put(Position.RF3, 2.7); pawnPV.put(Position.RF2, 4.0); pawnPV.put(Position.RF1, 4.2);
+                pawnPV.put(Position.RE4, 2.0); pawnPV.put(Position.RE3, 3.0); pawnPV.put(Position.RE2, 4.0); pawnPV.put(Position.RE1, 4.2);
+                pawnPV.put(Position.RD4, 2.0); pawnPV.put(Position.RD3, 2.5); pawnPV.put(Position.RD2, 4.0); pawnPV.put(Position.RD1, 4.2);
+                pawnPV.put(Position.RC4, 2.0); pawnPV.put(Position.RC3, 2.7); pawnPV.put(Position.RC2, 4.0); pawnPV.put(Position.RC1, 4.2);
+                pawnPV.put(Position.RB4, 2.0); pawnPV.put(Position.RB3, 2.5); pawnPV.put(Position.RB2, 4.0); pawnPV.put(Position.RB1, 4.2);
+                pawnPV.put(Position.RA4, 2.0); pawnPV.put(Position.RA3, 2.5); pawnPV.put(Position.RA2, 4.0); pawnPV.put(Position.RA1, 4.2);
+
+                
+                knightPV.put(Position.BA1, -3.7); knightPV.put(Position.BA2, -3.5); knightPV.put(Position.BA3, -3.0); knightPV.put(Position.BA4, -3.0);
+                knightPV.put(Position.BB1, -3.5); knightPV.put(Position.BB2, -2.0); knightPV.put(Position.BB3, 0.8); knightPV.put(Position.BB4, 0.0);
+                knightPV.put(Position.BC1, -3.0); knightPV.put(Position.BC2, 0.0); knightPV.put(Position.BC3, 0.8); knightPV.put(Position.BC4, 1.0);
+                knightPV.put(Position.BD1, -3.0); knightPV.put(Position.BD2, 0.0); knightPV.put(Position.BD3, 0.8); knightPV.put(Position.BD4, 1.5);
+                knightPV.put(Position.BE1, -3.0); knightPV.put(Position.BE2, 0.0); knightPV.put(Position.BE3, 0.8); knightPV.put(Position.BE4, 1.5);
+                knightPV.put(Position.BF1, -3.0); knightPV.put(Position.BF2, 0.0); knightPV.put(Position.BF3, 0.8); knightPV.put(Position.BF4, 1.0);
+                knightPV.put(Position.BG1, -3.5); knightPV.put(Position.BG2, -2.0); knightPV.put(Position.BG3, -0.8); knightPV.put(Position.BG4, 0.0);
+                knightPV.put(Position.BH1, -3.7); knightPV.put(Position.BH2, -3.5); knightPV.put(Position.BH3, -3.0); knightPV.put(Position.BH4, -3.0);
+
+                knightPV.put(Position.GH4, -3.0); knightPV.put(Position.GH3, -3.0); knightPV.put(Position.GH2, -3.5); knightPV.put(Position.GH1, -3.7);
+                knightPV.put(Position.GG4, 0.8); knightPV.put(Position.GG3, 0.0); knightPV.put(Position.GG2, -2.0); knightPV.put(Position.GG1, -3.5);
+                knightPV.put(Position.GF4, 1.0); knightPV.put(Position.GF3, 0.8); knightPV.put(Position.GF2, 0.0); knightPV.put(Position.GF1, -3.0);
+                knightPV.put(Position.GE4, 1.5); knightPV.put(Position.GE3, 0.8); knightPV.put(Position.GE2, 0.0); knightPV.put(Position.GE1, -3.0);
+                knightPV.put(Position.GD4, 1.5); knightPV.put(Position.GD3, 0.8); knightPV.put(Position.GD2, 0.0); knightPV.put(Position.GD1, -3.0);
+                knightPV.put(Position.GC4, 1.0); knightPV.put(Position.GC3, 0.8); knightPV.put(Position.GC2, 0.0); knightPV.put(Position.GC1, -3.0);
+                knightPV.put(Position.GB4, 0.0); knightPV.put(Position.GB3, 0.8); knightPV.put(Position.GB2, -2.0); knightPV.put(Position.GB1, -3.5);
+                knightPV.put(Position.GA4, -3.0); knightPV.put(Position.GA3, -3.0); knightPV.put(Position.GA2, -3.5); knightPV.put(Position.GA1, -3.7);
+
+                knightPV.put(Position.RH4, -3.0); knightPV.put(Position.RH3, -3.0); knightPV.put(Position.RH2, -3.5); knightPV.put(Position.RH1, -3.7);
+                knightPV.put(Position.RH4, 0.8); knightPV.put(Position.RG3, 0.0); knightPV.put(Position.RG2, -2.0); knightPV.put(Position.RG1, -3.5);
+                knightPV.put(Position.RF4, 1.0); knightPV.put(Position.RF3, 0.8); knightPV.put(Position.RF2, 0.0); knightPV.put(Position.RF1, -3.0);
+                knightPV.put(Position.RE4, 1.5); knightPV.put(Position.RE3, 0.8); knightPV.put(Position.RE2, 0.0); knightPV.put(Position.RE1, -3.0);
+                knightPV.put(Position.RD4, 1.5); knightPV.put(Position.RD3, 0.8); knightPV.put(Position.RD2, 0.0); knightPV.put(Position.RD1, -3.0);
+                knightPV.put(Position.RC4, 1.0); knightPV.put(Position.RC3, 0.8); knightPV.put(Position.RC2, 0.0); knightPV.put(Position.RC1, -3.0);
+                knightPV.put(Position.RB4, 0.0); knightPV.put(Position.RB3, 0.8); knightPV.put(Position.RB2, -2.0); knightPV.put(Position.RB1, -3.5);
+                knightPV.put(Position.RA4, -3.0); knightPV.put(Position.RA3, -3.0); knightPV.put(Position.RA2, -3.5); knightPV.put(Position.RA1, -3.7);
 
 
+                bishopPV.put(Position.BA1, -2.0); bishopPV.put(Position.BA2, -1.0); bishopPV.put(Position.BA3, -1.0); bishopPV.put(Position.BA4, -1.0);
+                bishopPV.put(Position.BB1, -1.0); bishopPV.put(Position.BB2, 0.5); bishopPV.put(Position.BB3, 0.8); bishopPV.put(Position.BB4, 0.0);
+                bishopPV.put(Position.BC1, -1.0); bishopPV.put(Position.BC2, 0.0); bishopPV.put(Position.BC3, 0.8); bishopPV.put(Position.BC4, 0.8);
+                bishopPV.put(Position.BD1, -1.0); bishopPV.put(Position.BD2, 0.0); bishopPV.put(Position.BD3, 0.8); bishopPV.put(Position.BD4, 0.8);
+                bishopPV.put(Position.BE1, -1.0); bishopPV.put(Position.BE2, 0.0); bishopPV.put(Position.BE3, 0.8); bishopPV.put(Position.BE4, 0.8);
+                bishopPV.put(Position.BF1, -1.0); bishopPV.put(Position.BF2, 0.0); bishopPV.put(Position.BF3, 0.8); bishopPV.put(Position.BF4, 0.8);
+                bishopPV.put(Position.BG1, -1.0); bishopPV.put(Position.BG2, 0.5); bishopPV.put(Position.BG3, 0.8); bishopPV.put(Position.BG4, 0.0);
+                bishopPV.put(Position.BH1, -2.0); bishopPV.put(Position.BH2, -1.5); bishopPV.put(Position.BH3, -1.0); bishopPV.put(Position.BH4, -1.0);
+
+                bishopPV.put(Position.GH4, -1.0); bishopPV.put(Position.GH3, -1.0); bishopPV.put(Position.GH2, -1.5); bishopPV.put(Position.GH1, -2.0);
+                bishopPV.put(Position.GG4, 0.0); bishopPV.put(Position.GG3, 0.8); bishopPV.put(Position.GG2, 0.5); bishopPV.put(Position.GG1, -1.0);
+                bishopPV.put(Position.GF4, 0.8); bishopPV.put(Position.GF3, 0.8); bishopPV.put(Position.GF2, 0.0); bishopPV.put(Position.GF1, -1.0);
+                bishopPV.put(Position.GE4, 0.8); bishopPV.put(Position.GE3, 0.8); bishopPV.put(Position.GE2, 0.0); bishopPV.put(Position.GE1, -1.0);
+                bishopPV.put(Position.GD4, 0.8); bishopPV.put(Position.GD3, 0.8); bishopPV.put(Position.GD2, 0.0); bishopPV.put(Position.GD1, -1.0);
+                bishopPV.put(Position.GC4, 0.8); bishopPV.put(Position.GC3, 0.8); bishopPV.put(Position.GC2, 0.0); bishopPV.put(Position.GC1, -1.0);
+                bishopPV.put(Position.GB4, 0.0); bishopPV.put(Position.GB3, 0.8); bishopPV.put(Position.GB2, 0.5); bishopPV.put(Position.GB1, -1.0);
+                bishopPV.put(Position.GA4, -1.0); bishopPV.put(Position.GA3, -1.0); bishopPV.put(Position.GA2, -1.5); bishopPV.put(Position.GA1, -2.0);
+
+                bishopPV.put(Position.RH4, -1.0); bishopPV.put(Position.RH3, -1.0); bishopPV.put(Position.RH2, -1.5); bishopPV.put(Position.RH1, -2.0);
+                bishopPV.put(Position.RG4, 0.0); bishopPV.put(Position.RG3, 0.8); bishopPV.put(Position.RG2, 0.5); bishopPV.put(Position.RG1, -1.0);
+                bishopPV.put(Position.RF4, 0.8); bishopPV.put(Position.RF3, 0.8); bishopPV.put(Position.RF2, 0.0); bishopPV.put(Position.RF1, -1.0);
+                bishopPV.put(Position.RE4, 0.8); bishopPV.put(Position.RE3, 0.8); bishopPV.put(Position.RE2, 0.0); bishopPV.put(Position.RE1, -1.0);
+                bishopPV.put(Position.RD4, 0.8); bishopPV.put(Position.RD3, 0.8); bishopPV.put(Position.RD2, 0.0); bishopPV.put(Position.RD1, -1.0);
+                bishopPV.put(Position.RC4, 0.8); bishopPV.put(Position.RC3, 0.8); bishopPV.put(Position.RC2, 0.0); bishopPV.put(Position.RC1, -1.0);
+                bishopPV.put(Position.RB4, 0.0); bishopPV.put(Position.RB3, 0.8); bishopPV.put(Position.RB2, 0.5); bishopPV.put(Position.RB1, -1.0);
+                bishopPV.put(Position.RA4, -1.0); bishopPV.put(Position.RA3, -1.0); bishopPV.put(Position.RA2, -1.5); bishopPV.put(Position.RA1, -2.0);
+
+
+                rookPV.put(Position.BA1, 0.0); rookPV.put(Position.BA2, -0.5); rookPV.put(Position.BA3, -0.5); rookPV.put(Position.BA4, -0.5);
+                rookPV.put(Position.BB1, 0.0); rookPV.put(Position.BB2, 0.0); rookPV.put(Position.BB3, 0.0); rookPV.put(Position.BB4, 0.0);
+                rookPV.put(Position.BC1, 0.0); rookPV.put(Position.BC2, 0.0); rookPV.put(Position.BC3, 0.0); rookPV.put(Position.BC4, 0.0);
+                rookPV.put(Position.BD1, 0.5); rookPV.put(Position.BD2, 0.0); rookPV.put(Position.BD3, 0.0); rookPV.put(Position.BD4, 0.0);
+                rookPV.put(Position.BE1, 0.5); rookPV.put(Position.BE2, 0.0); rookPV.put(Position.BE3, 0.0); rookPV.put(Position.BE4, 0.0);
+                rookPV.put(Position.BF1, 0.0); rookPV.put(Position.BF2, 0.0); rookPV.put(Position.BF3, 0.0); rookPV.put(Position.BF4, 0.0);
+                rookPV.put(Position.BG1, 0.0); rookPV.put(Position.BG2, 0.0); rookPV.put(Position.BG3, 0.0); rookPV.put(Position.BG4, 0.0);
+                rookPV.put(Position.BH1, -0.0); rookPV.put(Position.BH2, -0.5); rookPV.put(Position.BH3, -0.5); rookPV.put(Position.BH4, -0.5);
+
+                rookPV.put(Position.GH4, -0.5); rookPV.put(Position.GH3, -0.5); rookPV.put(Position.GH2, 0.5); rookPV.put(Position.GH1, 0.0);
+                rookPV.put(Position.GG4, 0.0); rookPV.put(Position.GG3, 0.0); rookPV.put(Position.GG2, 1.0); rookPV.put(Position.GG1, 0.0);
+                rookPV.put(Position.GF4, 0.0); rookPV.put(Position.GF3, 0.0); rookPV.put(Position.GF2, 1.0); rookPV.put(Position.GF1, 0.0);
+                rookPV.put(Position.GE4, 0.0); rookPV.put(Position.GE3, 0.0); rookPV.put(Position.GE2, 1.0); rookPV.put(Position.GE1, 0.0);
+                rookPV.put(Position.GD4, 0.0); rookPV.put(Position.GD3, 0.0); rookPV.put(Position.GD2, 1.0); rookPV.put(Position.GD1, 0.0);
+                rookPV.put(Position.GC4, 0.0); rookPV.put(Position.GC3, 0.0); rookPV.put(Position.GC2, 1.0); rookPV.put(Position.GC1, 0.0);
+                rookPV.put(Position.GB4, 0.0); rookPV.put(Position.GB3, 0.0); rookPV.put(Position.GB2, 1.0); rookPV.put(Position.GB1, 0.0);
+                rookPV.put(Position.GA4, -0.5); rookPV.put(Position.GA3, -0.5); rookPV.put(Position.GA2, 0.5); rookPV.put(Position.GA1, 0.0);
+
+                rookPV.put(Position.RH4, -0.5); rookPV.put(Position.RH3, -0.5); rookPV.put(Position.RH2, 0.5); rookPV.put(Position.RH1, 0.0);
+                rookPV.put(Position.RG4, 0.0); rookPV.put(Position.RG3, 0.0); rookPV.put(Position.RG2, 1.0); rookPV.put(Position.RG1, 0.0);
+                rookPV.put(Position.RF4, 0.0); rookPV.put(Position.RF3, 0.0); rookPV.put(Position.RF2, 1.0); rookPV.put(Position.RF1, 0.0);
+                rookPV.put(Position.RE4, 0.0); rookPV.put(Position.RE3, 0.0); rookPV.put(Position.RE2, 1.0); rookPV.put(Position.RE1, 0.0);
+                rookPV.put(Position.RD4, 0.0); rookPV.put(Position.RD3, 0.0); rookPV.put(Position.RD2, 1.0); rookPV.put(Position.RD1, 0.0);
+                rookPV.put(Position.RC4, 0.0); rookPV.put(Position.RC3, 0.0); rookPV.put(Position.RC2, 1.0); rookPV.put(Position.RC1, 0.0);
+                rookPV.put(Position.RB4, 0.0); rookPV.put(Position.RB3, 0.0); rookPV.put(Position.RB2, 1.0); rookPV.put(Position.RB1, 0.0);
+                rookPV.put(Position.RA4, -0.5); rookPV.put(Position.RA3, -0.5); rookPV.put(Position.RA2, 0.5); rookPV.put(Position.RA1, 0.0);
+
+
+                queenPV.put(Position.BA1, -1.8); queenPV.put(Position.BA2, -0.9); queenPV.put(Position.BA3, -0.9); queenPV.put(Position.BA4, 0.0);
+                queenPV.put(Position.BB1, -0.9); queenPV.put(Position.BB2, 0.0); queenPV.put(Position.BB3, 0.6); queenPV.put(Position.BB4, 0.0);
+                queenPV.put(Position.BC1, -0.9); queenPV.put(Position.BC2, 0.6); queenPV.put(Position.BC3, 0.6); queenPV.put(Position.BC4, 0.6);
+                queenPV.put(Position.BD1, -0.6); queenPV.put(Position.BD2, 0.6); queenPV.put(Position.BD3, 0.6); queenPV.put(Position.BD4, 0.6);
+                queenPV.put(Position.BE1, -0.6); queenPV.put(Position.BE2, 0.6); queenPV.put(Position.BE3, 0.6); queenPV.put(Position.BE4, 0.6);
+                queenPV.put(Position.BF1, -0.9); queenPV.put(Position.BF2, 0.6); queenPV.put(Position.BF3, 0.6); queenPV.put(Position.BF4, 0.6);
+                queenPV.put(Position.BG1, -0.9); queenPV.put(Position.BG2, 0.0); queenPV.put(Position.BG3, 0.6); queenPV.put(Position.BG4, 0.0);
+                queenPV.put(Position.BH1, -1.8); queenPV.put(Position.BH2, -0.9); queenPV.put(Position.BH3, -0.9); queenPV.put(Position.BH4, 0.0);
+
+                queenPV.put(Position.GH4, -0.6); queenPV.put(Position.GH3, -0.9); queenPV.put(Position.GH2, -0.9); queenPV.put(Position.GH1, -1.8);
+                queenPV.put(Position.GG4, 0.6); queenPV.put(Position.GG3, 0.0); queenPV.put(Position.GG2, 0.0); queenPV.put(Position.GG1, -0.9);
+                queenPV.put(Position.GF4, 0.6); queenPV.put(Position.GF3, 0.6); queenPV.put(Position.GF2, 0.0); queenPV.put(Position.GF1, -0.9);
+                queenPV.put(Position.GE4, 0.6); queenPV.put(Position.GE3, 0.6); queenPV.put(Position.GE2, 0.0); queenPV.put(Position.GE1, -0.6);
+                queenPV.put(Position.GD4, 0.6); queenPV.put(Position.GD3, 0.6); queenPV.put(Position.GD2, 0.0); queenPV.put(Position.GD1, -0.6);
+                queenPV.put(Position.GC4, 0.6); queenPV.put(Position.GC3, 0.6); queenPV.put(Position.GC2, 0.0); queenPV.put(Position.GC1, -0.6);
+                queenPV.put(Position.GB4, 0.6); queenPV.put(Position.GB3, 0.0); queenPV.put(Position.GB2, 0.0); queenPV.put(Position.GB1, -0.9);
+                queenPV.put(Position.GA4, -0.6); queenPV.put(Position.GA3, -0.9); queenPV.put(Position.GA2, -0.9); queenPV.put(Position.GA1, -1.8);
+
+                queenPV.put(Position.RH4, -0.6); queenPV.put(Position.RH3, -0.9); queenPV.put(Position.RH2, -0.9); queenPV.put(Position.RH1, -1.8);
+                queenPV.put(Position.RG4, 0.6); queenPV.put(Position.RG3, 0.0); queenPV.put(Position.RG2, 0.0); queenPV.put(Position.RG1, -0.9);
+                queenPV.put(Position.RF4, 0.6); queenPV.put(Position.RF3, 0.6); queenPV.put(Position.RF2, 0.0); queenPV.put(Position.RF1, -0.9);
+                queenPV.put(Position.RE4, 0.6); queenPV.put(Position.RE3, 0.6); queenPV.put(Position.RE2, 0.0); queenPV.put(Position.RE1, -0.6);
+                queenPV.put(Position.RD4, 0.6); queenPV.put(Position.RD3, 0.6); queenPV.put(Position.RD2, 0.0); queenPV.put(Position.RD1, -0.6);
+                queenPV.put(Position.RC4, 0.6); queenPV.put(Position.RC3, 0.6); queenPV.put(Position.RC2, 0.0); queenPV.put(Position.RC1, -0.6);
+                queenPV.put(Position.RB4, 0.6); queenPV.put(Position.RB3, 0.0); queenPV.put(Position.RB2, 0.0); queenPV.put(Position.RB1, -0.9);
+                queenPV.put(Position.RA4, -0.6); queenPV.put(Position.RA3, -0.9); queenPV.put(Position.RA2, -0.9); queenPV.put(Position.RA1, -1.8);
+
+
+                kingPV.put(Position.BA1, 2.0); kingPV.put(Position.BA2, 2.0); kingPV.put(Position.BA3, -1.0); kingPV.put(Position.BA4, -2.0);
+                kingPV.put(Position.BB1, 3.0); kingPV.put(Position.BB2, 2.0); kingPV.put(Position.BB3, -2.0); kingPV.put(Position.BB4, -3.0);
+                kingPV.put(Position.BC1, 1.0); kingPV.put(Position.BC2, 0.0); kingPV.put(Position.BC3, -2.0); kingPV.put(Position.BC4, -3.0);
+                kingPV.put(Position.BD1, 0.0); kingPV.put(Position.BD2, 0.0); kingPV.put(Position.BD3, -2.0); kingPV.put(Position.BD4, -4.0);
+                kingPV.put(Position.BE1, 0.0); kingPV.put(Position.BE2, 0.0); kingPV.put(Position.BE3, -2.0); kingPV.put(Position.BE4, -4.0);
+                kingPV.put(Position.BF1, 1.0); kingPV.put(Position.BF2, 0.0); kingPV.put(Position.BF3, -2.0); kingPV.put(Position.BF4, -3.0);
+                kingPV.put(Position.BG1, 3.0); kingPV.put(Position.BG2, 2.0); kingPV.put(Position.BG3, -2.0); kingPV.put(Position.BG4, -3.0);
+                kingPV.put(Position.BH1, 2.0); kingPV.put(Position.BH2, 2.0); kingPV.put(Position.BH3, -1.0); kingPV.put(Position.BH4, -2.0);
+
+                kingPV.put(Position.GH4, -3.0); kingPV.put(Position.GH3, -3.0); kingPV.put(Position.GH2, -3.0); kingPV.put(Position.GH1, -3.0);
+                kingPV.put(Position.GG4, -4.0); kingPV.put(Position.GG3, -4.0); kingPV.put(Position.GG2, -4.0); kingPV.put(Position.GG1, -4.0);
+                kingPV.put(Position.GF4, -4.0); kingPV.put(Position.GF3, -4.0); kingPV.put(Position.GF2, -4.0); kingPV.put(Position.GF1, -4.0);
+                kingPV.put(Position.GE4, -5.0); kingPV.put(Position.GE3, -5.0); kingPV.put(Position.GE2, -5.0); kingPV.put(Position.GE1, -5.0);
+                kingPV.put(Position.GD4, -5.0); kingPV.put(Position.GD3, -5.0); kingPV.put(Position.GD2, -5.0); kingPV.put(Position.GD1, -5.0);
+                kingPV.put(Position.GC4, -4.0); kingPV.put(Position.GC3, -4.0); kingPV.put(Position.GC2, -4.0); kingPV.put(Position.GC1, -4.0);
+                kingPV.put(Position.GB4, -4.0); kingPV.put(Position.GB3, -4.0); kingPV.put(Position.GB2, -4.0); kingPV.put(Position.GB1, -4.0);
+                kingPV.put(Position.GA4, -3.0); kingPV.put(Position.GA3, -3.0); kingPV.put(Position.GA2, -3.0); kingPV.put(Position.GA1, -3.0);
+
+                kingPV.put(Position.RH4, -3.0); kingPV.put(Position.RH3, -3.0); kingPV.put(Position.RH2, -3.0); kingPV.put(Position.RH1, -3.0);
+                kingPV.put(Position.RG4, -4.0); kingPV.put(Position.RG3, -4.0); kingPV.put(Position.RG2, -4.0); kingPV.put(Position.RG1, -4.0);
+                kingPV.put(Position.RF4, -4.0); kingPV.put(Position.RF3, -4.0); kingPV.put(Position.RF2, -4.0); kingPV.put(Position.RF1, -4.0);
+                kingPV.put(Position.RE4, -5.0); kingPV.put(Position.RE3, -5.0); kingPV.put(Position.RE2, -5.0); kingPV.put(Position.RE1, -5.0);
+                kingPV.put(Position.RD4, -5.0); kingPV.put(Position.RD3, -5.0); kingPV.put(Position.RD2, -5.0); kingPV.put(Position.RD1, -5.0);
+                kingPV.put(Position.RC4, -4.0); kingPV.put(Position.RC3, -4.0); kingPV.put(Position.RC2, -4.0); kingPV.put(Position.RC1, -4.0);
+                kingPV.put(Position.RB4, -4.0); kingPV.put(Position.RB3, -4.0); kingPV.put(Position.RB2, -4.0); kingPV.put(Position.RB1, -4.0);
+                kingPV.put(Position.RA4, -3.0); kingPV.put(Position.RA3, -3.0); kingPV.put(Position.RA2, -3.0); kingPV.put(Position.RA1, -3.0);
 
                 break;
-                
+
             case RED:
-                pawnPositionValue.put(Position.RA1, 0.0); pawnPositionValue.put(Position.RA2, 2.0);
-                pawnPositionValue.put(Position.RA3, 2.0); pawnPositionValue.put(Position.RA4, 0.0);
-                pawnPositionValue.put(Position.RB1, 0.0); pawnPositionValue.put(Position.RB2, 3.0);
-                pawnPositionValue.put(Position.RB3, -2.0); pawnPositionValue.put(Position.RB4, 0.0);
-                pawnPositionValue.put(Position.RC1, 0.0); pawnPositionValue.put(Position.RC2, 3.0);
-                pawnPositionValue.put(Position.RC3, -2.0); pawnPositionValue.put(Position.RC4, 0.0);
-                pawnPositionValue.put(Position.RD1, 0.0); pawnPositionValue.put(Position.RD2, -3.5);
-                pawnPositionValue.put(Position.RD3, 0.0); pawnPositionValue.put(Position.RD4, 4.5);
-                pawnPositionValue.put(Position.RE1, 0.0); pawnPositionValue.put(Position.RE2, -3.5);
-                pawnPositionValue.put(Position.RE3, 0.0); pawnPositionValue.put(Position.RE4, 4.5);
-                pawnPositionValue.put(Position.RF1, 0.0); pawnPositionValue.put(Position.RF2, 3.0);
-                pawnPositionValue.put(Position.RF3, -2.0); pawnPositionValue.put(Position.RF4, 0.0);
-                pawnPositionValue.put(Position.RG1, 0.0); pawnPositionValue.put(Position.RG2, 3.0);
-                pawnPositionValue.put(Position.RG3, -2.0); pawnPositionValue.put(Position.RG4, 0.0);
-                pawnPositionValue.put(Position.RH1, 0.0); pawnPositionValue.put(Position.RH2, 2.0);
-                pawnPositionValue.put(Position.RH3, 2.0); pawnPositionValue.put(Position.RH4, 0.0);
+                pawnPV.put(Position.RA1, 0.0); pawnPV.put(Position.RA2, 2.0); pawnPV.put(Position.RA3, 2.0); pawnPV.put(Position.RA4, 0.0);
+                pawnPV.put(Position.RB1, 0.0); pawnPV.put(Position.RB2, 3.0); pawnPV.put(Position.RB3, -2.0); pawnPV.put(Position.RB4, 0.0);
+                pawnPV.put(Position.RC1, 0.0); pawnPV.put(Position.RC2, 3.0); pawnPV.put(Position.RC3, -2.0); pawnPV.put(Position.RC4, 0.0);
+                pawnPV.put(Position.RD1, 0.0); pawnPV.put(Position.RD2, -3.5); pawnPV.put(Position.RD3, 0.0); pawnPV.put(Position.RD4, 4.5);
+                pawnPV.put(Position.RE1, 0.0); pawnPV.put(Position.RE2, -3.5); pawnPV.put(Position.RE3, 0.0); pawnPV.put(Position.RE4, 4.5);
+                pawnPV.put(Position.RF1, 0.0); pawnPV.put(Position.RF2, 3.0); pawnPV.put(Position.RF3, -2.0); pawnPV.put(Position.RF4, 0.0);
+                pawnPV.put(Position.RG1, 0.0); pawnPV.put(Position.RG2, 3.0); pawnPV.put(Position.RG3, -2.0); pawnPV.put(Position.RG4, 0.0);
+                pawnPV.put(Position.RH1, 0.0); pawnPV.put(Position.RH2, 2.0); pawnPV.put(Position.RH3, 2.0); pawnPV.put(Position.RH4, 0.0);
 
-                pawnPositionValue.put(Position.GH4, 2.0); pawnPositionValue.put(Position.GH3, 2.5);
-                pawnPositionValue.put(Position.GH2, 4.0); pawnPositionValue.put(Position.GH1, 4.2);
-                pawnPositionValue.put(Position.GG4, 2.0); pawnPositionValue.put(Position.GG3, 2.5);
-                pawnPositionValue.put(Position.GG2, 4.0); pawnPositionValue.put(Position.GG1, 4.2);
-                pawnPositionValue.put(Position.GF4, 2.0); pawnPositionValue.put(Position.GF3, 2.7);
-                pawnPositionValue.put(Position.GF2, 4.0); pawnPositionValue.put(Position.GF1, 4.2);
-                pawnPositionValue.put(Position.GE4, 2.0); pawnPositionValue.put(Position.GE3, 3.0);
-                pawnPositionValue.put(Position.GE2, 4.0); pawnPositionValue.put(Position.GE1, 4.2);
-                pawnPositionValue.put(Position.GD4, 2.0); pawnPositionValue.put(Position.GD3, 2.5);
-                pawnPositionValue.put(Position.GD2, 4.0); pawnPositionValue.put(Position.GD1, 4.2);
-                pawnPositionValue.put(Position.GC4, 2.0); pawnPositionValue.put(Position.GC3, 2.7);
-                pawnPositionValue.put(Position.GC2, 4.0); pawnPositionValue.put(Position.GC1, 4.2);
-                pawnPositionValue.put(Position.GB4, 2.0); pawnPositionValue.put(Position.GB3, 2.5);
-                pawnPositionValue.put(Position.GB2, 4.0); pawnPositionValue.put(Position.GB1, 4.2);
-                pawnPositionValue.put(Position.GA4, 2.0); pawnPositionValue.put(Position.GA3, 2.5);
-                pawnPositionValue.put(Position.GA2, 4.0); pawnPositionValue.put(Position.GA1, 4.2);
+                pawnPV.put(Position.GH4, 2.0); pawnPV.put(Position.GH3, 2.5); pawnPV.put(Position.GH2, 4.0); pawnPV.put(Position.GH1, 4.2);
+                pawnPV.put(Position.GG4, 2.0); pawnPV.put(Position.GG3, 2.5); pawnPV.put(Position.GG2, 4.0); pawnPV.put(Position.GG1, 4.2);
+                pawnPV.put(Position.GF4, 2.0); pawnPV.put(Position.GF3, 2.7); pawnPV.put(Position.GF2, 4.0); pawnPV.put(Position.GF1, 4.2);
+                pawnPV.put(Position.GE4, 2.0); pawnPV.put(Position.GE3, 3.0); pawnPV.put(Position.GE2, 4.0); pawnPV.put(Position.GE1, 4.2);
+                pawnPV.put(Position.GD4, 2.0); pawnPV.put(Position.GD3, 2.5); pawnPV.put(Position.GD2, 4.0); pawnPV.put(Position.GD1, 4.2);
+                pawnPV.put(Position.GC4, 2.0); pawnPV.put(Position.GC3, 2.7); pawnPV.put(Position.GC2, 4.0); pawnPV.put(Position.GC1, 4.2);
+                pawnPV.put(Position.GB4, 2.0); pawnPV.put(Position.GB3, 2.5); pawnPV.put(Position.GB2, 4.0); pawnPV.put(Position.GB1, 4.2);
+                pawnPV.put(Position.GA4, 2.0); pawnPV.put(Position.GA3, 2.5); pawnPV.put(Position.GA2, 4.0); pawnPV.put(Position.GA1, 4.2);
 
-                pawnPositionValue.put(Position.BH4, 2.0); pawnPositionValue.put(Position.BH3, 2.5);
-                pawnPositionValue.put(Position.BH2, 4.0); pawnPositionValue.put(Position.BH1, 4.2);
-                pawnPositionValue.put(Position.BH4, 2.0); pawnPositionValue.put(Position.BG3, 2.5);
-                pawnPositionValue.put(Position.BG2, 4.0); pawnPositionValue.put(Position.BG1, 4.2);
-                pawnPositionValue.put(Position.BF4, 2.0); pawnPositionValue.put(Position.BF3, 2.7);
-                pawnPositionValue.put(Position.BF2, 4.0); pawnPositionValue.put(Position.BF1, 4.2);
-                pawnPositionValue.put(Position.BE4, 2.0); pawnPositionValue.put(Position.BE3, 3.0);
-                pawnPositionValue.put(Position.BE2, 4.0); pawnPositionValue.put(Position.BE1, 4.2);
-                pawnPositionValue.put(Position.BD4, 2.0); pawnPositionValue.put(Position.BD3, 2.5);
-                pawnPositionValue.put(Position.BD2, 4.0); pawnPositionValue.put(Position.BD1, 4.2);
-                pawnPositionValue.put(Position.BC4, 2.0); pawnPositionValue.put(Position.BC3, 2.7);
-                pawnPositionValue.put(Position.BC2, 4.0); pawnPositionValue.put(Position.BC1, 4.2);
-                pawnPositionValue.put(Position.BB4, 2.0); pawnPositionValue.put(Position.BB3, 2.5);
-                pawnPositionValue.put(Position.BB2, 4.0); pawnPositionValue.put(Position.BB1, 4.2);
-                pawnPositionValue.put(Position.BA4, 2.0); pawnPositionValue.put(Position.BA3, 2.5);
-                pawnPositionValue.put(Position.BA2, 4.0); pawnPositionValue.put(Position.BA1, 4.2);
+                pawnPV.put(Position.BH4, 2.0); pawnPV.put(Position.BH3, 2.5); pawnPV.put(Position.BH2, 4.0); pawnPV.put(Position.BH1, 4.2);
+                pawnPV.put(Position.BH4, 2.0); pawnPV.put(Position.BG3, 2.5); pawnPV.put(Position.BG2, 4.0); pawnPV.put(Position.BG1, 4.2);
+                pawnPV.put(Position.BF4, 2.0); pawnPV.put(Position.BF3, 2.7); pawnPV.put(Position.BF2, 4.0); pawnPV.put(Position.BF1, 4.2);
+                pawnPV.put(Position.BE4, 2.0); pawnPV.put(Position.BE3, 3.0); pawnPV.put(Position.BE2, 4.0); pawnPV.put(Position.BE1, 4.2);
+                pawnPV.put(Position.BD4, 2.0); pawnPV.put(Position.BD3, 2.5); pawnPV.put(Position.BD2, 4.0); pawnPV.put(Position.BD1, 4.2);
+                pawnPV.put(Position.BC4, 2.0); pawnPV.put(Position.BC3, 2.7); pawnPV.put(Position.BC2, 4.0); pawnPV.put(Position.BC1, 4.2);
+                pawnPV.put(Position.BB4, 2.0); pawnPV.put(Position.BB3, 2.5); pawnPV.put(Position.BB2, 4.0); pawnPV.put(Position.BB1, 4.2);
+                pawnPV.put(Position.BA4, 2.0); pawnPV.put(Position.BA3, 2.5); pawnPV.put(Position.BA2, 4.0); pawnPV.put(Position.BA1, 4.2);
+
+
+                knightPV.put(Position.RA1, -3.7); knightPV.put(Position.RA2, -3.5); knightPV.put(Position.RA3, -3.0); knightPV.put(Position.RA4, -3.0);
+                knightPV.put(Position.RB1, -3.5); knightPV.put(Position.RB2, -2.0); knightPV.put(Position.RB3, 0.8); knightPV.put(Position.RB4, 0.0);
+                knightPV.put(Position.RC1, -3.0); knightPV.put(Position.RC2, 0.0); knightPV.put(Position.RC3, 0.8); knightPV.put(Position.RC4, 1.0);
+                knightPV.put(Position.RD1, -3.0); knightPV.put(Position.RD2, 0.0); knightPV.put(Position.RD3, 0.8); knightPV.put(Position.RD4, 1.5);
+                knightPV.put(Position.RE1, -3.0); knightPV.put(Position.RE2, 0.0); knightPV.put(Position.RE3, 0.8); knightPV.put(Position.RE4, 1.5);
+                knightPV.put(Position.RF1, -3.0); knightPV.put(Position.RF2, 0.0); knightPV.put(Position.RF3, 0.8); knightPV.put(Position.RF4, 1.0);
+                knightPV.put(Position.RG1, -3.5); knightPV.put(Position.RG2, -2.0); knightPV.put(Position.RG3, -0.8); knightPV.put(Position.RG4, 0.0);
+                knightPV.put(Position.RH1, -3.7); knightPV.put(Position.RH2, -3.5); knightPV.put(Position.RH3, -3.0); knightPV.put(Position.RH4, -3.0);
+
+                knightPV.put(Position.GH4, -3.0); knightPV.put(Position.GH3, -3.0); knightPV.put(Position.GH2, -3.5); knightPV.put(Position.GH1, -3.7);
+                knightPV.put(Position.GG4, 0.8); knightPV.put(Position.GG3, 0.0); knightPV.put(Position.GG2, -2.0); knightPV.put(Position.GG1, -3.5);
+                knightPV.put(Position.GF4, 1.0); knightPV.put(Position.GF3, 0.8); knightPV.put(Position.GF2, 0.0); knightPV.put(Position.GF1, -3.0);
+                knightPV.put(Position.GE4, 1.5); knightPV.put(Position.GE3, 0.8); knightPV.put(Position.GE2, 0.0); knightPV.put(Position.GE1, -3.0);
+                knightPV.put(Position.GD4, 1.5); knightPV.put(Position.GD3, 0.8); knightPV.put(Position.GD2, 0.0); knightPV.put(Position.GD1, -3.0);
+                knightPV.put(Position.GC4, 1.0); knightPV.put(Position.GC3, 0.8); knightPV.put(Position.GC2, 0.0); knightPV.put(Position.GC1, -3.0);
+                knightPV.put(Position.GB4, 0.0); knightPV.put(Position.GB3, 0.8); knightPV.put(Position.GB2, -2.0); knightPV.put(Position.GB1, -3.5);
+                knightPV.put(Position.GA4, -3.0); knightPV.put(Position.GA3, -3.0); knightPV.put(Position.GA2, -3.5); knightPV.put(Position.GA1, -3.7);
+
+                knightPV.put(Position.BH4, -3.0); knightPV.put(Position.BH3, -3.0); knightPV.put(Position.BH2, -3.5); knightPV.put(Position.BH1, -3.7);
+                knightPV.put(Position.BH4, 0.8); knightPV.put(Position.BH3, 0.0); knightPV.put(Position.BG2, -2.0); knightPV.put(Position.BG1, -3.5);
+                knightPV.put(Position.BF4, 1.0); knightPV.put(Position.BF3, 0.8); knightPV.put(Position.BF2, 0.0); knightPV.put(Position.BF1, -3.0);
+                knightPV.put(Position.BE4, 1.5); knightPV.put(Position.BE3, 0.8); knightPV.put(Position.BE2, 0.0); knightPV.put(Position.BE1, -3.0);
+                knightPV.put(Position.BD4, 1.5); knightPV.put(Position.BD3, 0.8); knightPV.put(Position.BD2, 0.0); knightPV.put(Position.BD1, -3.0);
+                knightPV.put(Position.BC4, 1.0); knightPV.put(Position.BC3, 0.8); knightPV.put(Position.BC2, 0.0); knightPV.put(Position.BC1, -3.0);
+                knightPV.put(Position.BB4, 0.0); knightPV.put(Position.BB3, 0.8); knightPV.put(Position.BB2, -2.0); knightPV.put(Position.BB1, -3.5);
+                knightPV.put(Position.BA4, -3.0); knightPV.put(Position.BA3, -3.0); knightPV.put(Position.BA2, -3.5); knightPV.put(Position.BA1, -3.7);
+
+
+                bishopPV.put(Position.RA1, -2.0); bishopPV.put(Position.RA2, -1.0); bishopPV.put(Position.RA3, -1.0); bishopPV.put(Position.RA4, -1.0);
+                bishopPV.put(Position.RB1, -1.0); bishopPV.put(Position.RB2, 0.5); bishopPV.put(Position.RB3, 0.8); bishopPV.put(Position.RB4, 0.0);
+                bishopPV.put(Position.RC1, -1.0); bishopPV.put(Position.RC2, 0.0); bishopPV.put(Position.RC3, 0.8); bishopPV.put(Position.RC4, 0.8);
+                bishopPV.put(Position.RD1, -1.0); bishopPV.put(Position.RD2, 0.0); bishopPV.put(Position.RD3, 0.8); bishopPV.put(Position.RD4, 0.8);
+                bishopPV.put(Position.RE1, -1.0); bishopPV.put(Position.RE2, 0.0); bishopPV.put(Position.RE3, 0.8); bishopPV.put(Position.RE4, 0.8);
+                bishopPV.put(Position.RF1, -1.0); bishopPV.put(Position.RF2, 0.0); bishopPV.put(Position.RF3, 0.8); bishopPV.put(Position.RF4, 0.8);
+                bishopPV.put(Position.RG1, -1.0); bishopPV.put(Position.RG2, 0.5); bishopPV.put(Position.RG3, 0.8); bishopPV.put(Position.RG4, 0.0);
+                bishopPV.put(Position.RH1, -2.0); bishopPV.put(Position.RH2, -1.5); bishopPV.put(Position.RH3, -1.0); bishopPV.put(Position.RH4, -1.0);
+
+                bishopPV.put(Position.GH4, -1.0); bishopPV.put(Position.GH3, -1.0); bishopPV.put(Position.GH2, -1.5); bishopPV.put(Position.GH1, -2.0);
+                bishopPV.put(Position.GG4, 0.0); bishopPV.put(Position.GG3, 0.8); bishopPV.put(Position.GG2, 0.5); bishopPV.put(Position.GG1, -1.0);
+                bishopPV.put(Position.GF4, 0.8); bishopPV.put(Position.GF3, 0.8); bishopPV.put(Position.GF2, 0.0); bishopPV.put(Position.GF1, -1.0);
+                bishopPV.put(Position.GE4, 0.8); bishopPV.put(Position.GE3, 0.8); bishopPV.put(Position.GE2, 0.0); bishopPV.put(Position.GE1, -1.0);
+                bishopPV.put(Position.GD4, 0.8); bishopPV.put(Position.GD3, 0.8); bishopPV.put(Position.GD2, 0.0); bishopPV.put(Position.GD1, -1.0);
+                bishopPV.put(Position.GC4, 0.8); bishopPV.put(Position.GC3, 0.8); bishopPV.put(Position.GC2, 0.0); bishopPV.put(Position.GC1, -1.0);
+                bishopPV.put(Position.GB4, 0.0); bishopPV.put(Position.GB3, 0.8); bishopPV.put(Position.GB2, 0.5); bishopPV.put(Position.GB1, -1.0);
+                bishopPV.put(Position.GA4, -1.0); bishopPV.put(Position.GA3, -1.0); bishopPV.put(Position.GA2, -1.5); bishopPV.put(Position.GA1, -2.0);
+
+                bishopPV.put(Position.BH4, -1.0); bishopPV.put(Position.BH3, -1.0); bishopPV.put(Position.BH2, -1.5); bishopPV.put(Position.BH1, -2.0);
+                bishopPV.put(Position.BG4, 0.0); bishopPV.put(Position.BG3, 0.8); bishopPV.put(Position.BG2, 0.5); bishopPV.put(Position.BG1, -1.0);
+                bishopPV.put(Position.BF4, 0.8); bishopPV.put(Position.BF3, 0.8); bishopPV.put(Position.BF2, 0.0); bishopPV.put(Position.BF1, -1.0);
+                bishopPV.put(Position.BE4, 0.8); bishopPV.put(Position.BE3, 0.8); bishopPV.put(Position.BE2, 0.0); bishopPV.put(Position.BE1, -1.0);
+                bishopPV.put(Position.BD4, 0.8); bishopPV.put(Position.BD3, 0.8); bishopPV.put(Position.BD2, 0.0); bishopPV.put(Position.BD1, -1.0);
+                bishopPV.put(Position.BC4, 0.8); bishopPV.put(Position.BC3, 0.8); bishopPV.put(Position.BC2, 0.0); bishopPV.put(Position.BC1, -1.0);
+                bishopPV.put(Position.BB4, 0.0); bishopPV.put(Position.BB3, 0.8); bishopPV.put(Position.BB2, 0.5); bishopPV.put(Position.BB1, -1.0);
+                bishopPV.put(Position.BA4, -1.0); bishopPV.put(Position.BA3, -1.0); bishopPV.put(Position.BA2, -1.5); bishopPV.put(Position.BA1, -2.0);
+
+
+                rookPV.put(Position.RA1, 0.0); rookPV.put(Position.RA2, -0.5); rookPV.put(Position.RA3, -0.5); rookPV.put(Position.RA4, -0.5);
+                rookPV.put(Position.RB1, 0.0); rookPV.put(Position.RB2, 0.0); rookPV.put(Position.RB3, 0.0); rookPV.put(Position.RB4, 0.0);
+                rookPV.put(Position.RC1, 0.0); rookPV.put(Position.RC2, 0.0); rookPV.put(Position.RC3, 0.0); rookPV.put(Position.RC4, 0.0);
+                rookPV.put(Position.RD1, 0.5); rookPV.put(Position.RD2, 0.0); rookPV.put(Position.RD3, 0.0); rookPV.put(Position.RD4, 0.0);
+                rookPV.put(Position.RE1, 0.5); rookPV.put(Position.RE2, 0.0); rookPV.put(Position.RE3, 0.0); rookPV.put(Position.RE4, 0.0);
+                rookPV.put(Position.RF1, 0.0); rookPV.put(Position.RF2, 0.0); rookPV.put(Position.RF3, 0.0); rookPV.put(Position.RF4, 0.0);
+                rookPV.put(Position.RG1, 0.0); rookPV.put(Position.RG2, 0.0); rookPV.put(Position.RG3, 0.0); rookPV.put(Position.RG4, 0.0);
+                rookPV.put(Position.RH1, -0.0); rookPV.put(Position.RH2, -0.5); rookPV.put(Position.RH3, -0.5); rookPV.put(Position.RH4, -0.5);
+
+                rookPV.put(Position.GH4, -0.5); rookPV.put(Position.GH3, -0.5); rookPV.put(Position.GH2, 0.5); rookPV.put(Position.GH1, 0.0);
+                rookPV.put(Position.GG4, 0.0); rookPV.put(Position.GG3, 0.0); rookPV.put(Position.GG2, 1.0); rookPV.put(Position.GG1, 0.0);
+                rookPV.put(Position.GF4, 0.0); rookPV.put(Position.GF3, 0.0); rookPV.put(Position.GF2, 1.0); rookPV.put(Position.GF1, 0.0);
+                rookPV.put(Position.GE4, 0.0); rookPV.put(Position.GE3, 0.0); rookPV.put(Position.GE2, 1.0); rookPV.put(Position.GE1, 0.0);
+                rookPV.put(Position.GD4, 0.0); rookPV.put(Position.GD3, 0.0); rookPV.put(Position.GD2, 1.0); rookPV.put(Position.GD1, 0.0);
+                rookPV.put(Position.GC4, 0.0); rookPV.put(Position.GC3, 0.0); rookPV.put(Position.GC2, 1.0); rookPV.put(Position.GC1, 0.0);
+                rookPV.put(Position.GB4, 0.0); rookPV.put(Position.GB3, 0.0); rookPV.put(Position.GB2, 1.0); rookPV.put(Position.GB1, 0.0);
+                rookPV.put(Position.GA4, -0.5); rookPV.put(Position.GA3, -0.5); rookPV.put(Position.GA2, 0.5); rookPV.put(Position.GA1, 0.0);
+
+                rookPV.put(Position.BH4, -0.5); rookPV.put(Position.BH3, -0.5); rookPV.put(Position.BH2, 0.5); rookPV.put(Position.BH1, 0.0);
+                rookPV.put(Position.BG4, 0.0); rookPV.put(Position.BG3, 0.0); rookPV.put(Position.BG2, 1.0); rookPV.put(Position.BG1, 0.0);
+                rookPV.put(Position.BF4, 0.0); rookPV.put(Position.BF3, 0.0); rookPV.put(Position.BF2, 1.0); rookPV.put(Position.BF1, 0.0);
+                rookPV.put(Position.BE4, 0.0); rookPV.put(Position.BE3, 0.0); rookPV.put(Position.BE2, 1.0); rookPV.put(Position.BE1, 0.0);
+                rookPV.put(Position.BD4, 0.0); rookPV.put(Position.BD3, 0.0); rookPV.put(Position.BD2, 1.0); rookPV.put(Position.BD1, 0.0);
+                rookPV.put(Position.BC4, 0.0); rookPV.put(Position.BC3, 0.0); rookPV.put(Position.BC2, 1.0); rookPV.put(Position.BC1, 0.0);
+                rookPV.put(Position.BB4, 0.0); rookPV.put(Position.BB3, 0.0); rookPV.put(Position.BB2, 1.0); rookPV.put(Position.BB1, 0.0);
+                rookPV.put(Position.BA4, -0.5); rookPV.put(Position.BA3, -0.5); rookPV.put(Position.BA2, 0.5); rookPV.put(Position.BA1, 0.0);
+
+
+                queenPV.put(Position.RA1, -1.8); queenPV.put(Position.RA2, -0.9); queenPV.put(Position.RA3, -0.9); queenPV.put(Position.RA4, 0.0);
+                queenPV.put(Position.RB1, -0.9); queenPV.put(Position.RB2, 0.0); queenPV.put(Position.RB3, 0.6); queenPV.put(Position.RB4, 0.0);
+                queenPV.put(Position.RC1, -0.9); queenPV.put(Position.RC2, 0.6); queenPV.put(Position.RC3, 0.6); queenPV.put(Position.RC4, 0.6);
+                queenPV.put(Position.RD1, -0.6); queenPV.put(Position.RD2, 0.6); queenPV.put(Position.RD3, 0.6); queenPV.put(Position.RD4, 0.6);
+                queenPV.put(Position.RE1, -0.6); queenPV.put(Position.RE2, 0.6); queenPV.put(Position.RE3, 0.6); queenPV.put(Position.RE4, 0.6);
+                queenPV.put(Position.RF1, -0.9); queenPV.put(Position.RF2, 0.6); queenPV.put(Position.RF3, 0.6); queenPV.put(Position.RF4, 0.6);
+                queenPV.put(Position.RG1, -0.9); queenPV.put(Position.RG2, 0.0); queenPV.put(Position.RG3, 0.6); queenPV.put(Position.RG4, 0.0);
+                queenPV.put(Position.RH1, -1.8); queenPV.put(Position.RH2, -0.9); queenPV.put(Position.RH3, -0.9); queenPV.put(Position.RH4, 0.0);
+
+                queenPV.put(Position.GH4, -0.6); queenPV.put(Position.GH3, -0.9); queenPV.put(Position.GH2, -0.9); queenPV.put(Position.GH1, -1.8);
+                queenPV.put(Position.GG4, 0.6); queenPV.put(Position.GG3, 0.0); queenPV.put(Position.GG2, 0.0); queenPV.put(Position.GG1, -0.9);
+                queenPV.put(Position.GF4, 0.6); queenPV.put(Position.GF3, 0.6); queenPV.put(Position.GF2, 0.0); queenPV.put(Position.GF1, -0.9);
+                queenPV.put(Position.GE4, 0.6); queenPV.put(Position.GE3, 0.6); queenPV.put(Position.GE2, 0.0); queenPV.put(Position.GE1, -0.6);
+                queenPV.put(Position.GD4, 0.6); queenPV.put(Position.GD3, 0.6); queenPV.put(Position.GD2, 0.0); queenPV.put(Position.GD1, -0.6);
+                queenPV.put(Position.GC4, 0.6); queenPV.put(Position.GC3, 0.6); queenPV.put(Position.GC2, 0.0); queenPV.put(Position.GC1, -0.6);
+                queenPV.put(Position.GB4, 0.6); queenPV.put(Position.GB3, 0.0); queenPV.put(Position.GB2, 0.0); queenPV.put(Position.GB1, -0.9);
+                queenPV.put(Position.GA4, -0.6); queenPV.put(Position.GA3, -0.9); queenPV.put(Position.GA2, -0.9); queenPV.put(Position.GA1, -1.8);
+
+                queenPV.put(Position.BH4, -0.6); queenPV.put(Position.BH3, -0.9); queenPV.put(Position.BH2, -0.9); queenPV.put(Position.BH1, -1.8);
+                queenPV.put(Position.BG4, 0.6); queenPV.put(Position.BG3, 0.0); queenPV.put(Position.BG2, 0.0); queenPV.put(Position.BG1, -0.9);
+                queenPV.put(Position.BF4, 0.6); queenPV.put(Position.BF3, 0.6); queenPV.put(Position.BF2, 0.0); queenPV.put(Position.BF1, -0.9);
+                queenPV.put(Position.BE4, 0.6); queenPV.put(Position.BE3, 0.6); queenPV.put(Position.BE2, 0.0); queenPV.put(Position.BE1, -0.6);
+                queenPV.put(Position.BD4, 0.6); queenPV.put(Position.BD3, 0.6); queenPV.put(Position.BD2, 0.0); queenPV.put(Position.BD1, -0.6);
+                queenPV.put(Position.BC4, 0.6); queenPV.put(Position.BC3, 0.6); queenPV.put(Position.BC2, 0.0); queenPV.put(Position.BC1, -0.6);
+                queenPV.put(Position.BB4, 0.6); queenPV.put(Position.BB3, 0.0); queenPV.put(Position.BB2, 0.0); queenPV.put(Position.BB1, -0.9);
+                queenPV.put(Position.BA4, -0.6); queenPV.put(Position.BA3, -0.9); queenPV.put(Position.BA2, -0.9); queenPV.put(Position.BA1, -1.8);
+
+
+                kingPV.put(Position.RA1, 2.0); kingPV.put(Position.RA2, 2.0); kingPV.put(Position.RA3, -1.0); kingPV.put(Position.RA4, -2.0);
+                kingPV.put(Position.RB1, 3.0); kingPV.put(Position.RB2, 2.0); kingPV.put(Position.RB3, -2.0); kingPV.put(Position.RB4, -3.0);
+                kingPV.put(Position.RC1, 1.0); kingPV.put(Position.RC2, 0.0); kingPV.put(Position.RC3, -2.0); kingPV.put(Position.RC4, -3.0);
+                kingPV.put(Position.RD1, 0.0); kingPV.put(Position.RD2, 0.0); kingPV.put(Position.RD3, -2.0); kingPV.put(Position.RD4, -4.0);
+                kingPV.put(Position.RE1, 0.0); kingPV.put(Position.RE2, 0.0); kingPV.put(Position.RE3, -2.0); kingPV.put(Position.RE4, -4.0);
+                kingPV.put(Position.RF1, 1.0); kingPV.put(Position.RF2, 0.0); kingPV.put(Position.RF3, -2.0); kingPV.put(Position.RF4, -3.0);
+                kingPV.put(Position.RG1, 3.0); kingPV.put(Position.RG2, 2.0); kingPV.put(Position.RG3, -2.0); kingPV.put(Position.RG4, -3.0);
+                kingPV.put(Position.RH1, 2.0); kingPV.put(Position.RH2, 2.0); kingPV.put(Position.RH3, -1.0); kingPV.put(Position.RH4, -2.0);
+
+                kingPV.put(Position.GH4, -3.0); kingPV.put(Position.GH3, -3.0); kingPV.put(Position.GH2, -3.0); kingPV.put(Position.GH1, -3.0);
+                kingPV.put(Position.GG4, -4.0); kingPV.put(Position.GG3, -4.0); kingPV.put(Position.GG2, -4.0); kingPV.put(Position.GG1, -4.0);
+                kingPV.put(Position.GF4, -4.0); kingPV.put(Position.GF3, -4.0); kingPV.put(Position.GF2, -4.0); kingPV.put(Position.GF1, -4.0);
+                kingPV.put(Position.GE4, -5.0); kingPV.put(Position.GE3, -5.0); kingPV.put(Position.GE2, -5.0); kingPV.put(Position.GE1, -5.0);
+                kingPV.put(Position.GD4, -5.0); kingPV.put(Position.GD3, -5.0); kingPV.put(Position.GD2, -5.0); kingPV.put(Position.GD1, -5.0);
+                kingPV.put(Position.GC4, -4.0); kingPV.put(Position.GC3, -4.0); kingPV.put(Position.GC2, -4.0); kingPV.put(Position.GC1, -4.0);
+                kingPV.put(Position.GB4, -4.0); kingPV.put(Position.GB3, -4.0); kingPV.put(Position.GB2, -4.0); kingPV.put(Position.GB1, -4.0);
+                kingPV.put(Position.GA4, -3.0); kingPV.put(Position.GA3, -3.0); kingPV.put(Position.GA2, -3.0); kingPV.put(Position.GA1, -3.0);
+
+                kingPV.put(Position.BH4, -3.0); kingPV.put(Position.BH3, -3.0); kingPV.put(Position.BH2, -3.0); kingPV.put(Position.BH1, -3.0);
+                kingPV.put(Position.BG4, -4.0); kingPV.put(Position.BG3, -4.0); kingPV.put(Position.BG2, -4.0); kingPV.put(Position.BG1, -4.0);
+                kingPV.put(Position.BF4, -4.0); kingPV.put(Position.BF3, -4.0); kingPV.put(Position.BF2, -4.0); kingPV.put(Position.BF1, -4.0);
+                kingPV.put(Position.BE4, -5.0); kingPV.put(Position.BE3, -5.0); kingPV.put(Position.BE2, -5.0); kingPV.put(Position.BE1, -5.0);
+                kingPV.put(Position.BD4, -5.0); kingPV.put(Position.BD3, -5.0); kingPV.put(Position.BD2, -5.0); kingPV.put(Position.BD1, -5.0);
+                kingPV.put(Position.BC4, -4.0); kingPV.put(Position.BC3, -4.0); kingPV.put(Position.BC2, -4.0); kingPV.put(Position.BC1, -4.0);
+                kingPV.put(Position.BB4, -4.0); kingPV.put(Position.BB3, -4.0); kingPV.put(Position.BB2, -4.0); kingPV.put(Position.BB1, -4.0);
+                kingPV.put(Position.BA4, -3.0); kingPV.put(Position.BA3, -3.0); kingPV.put(Position.BA2, -3.0); kingPV.put(Position.BA1, -3.0);
 
                 break;
 
             case GREEN:
+                pawnPV.put(Position.GA1, 0.0); pawnPV.put(Position.GA2, 2.0); pawnPV.put(Position.GA3, 2.0); pawnPV.put(Position.GA4, 0.0);
+                pawnPV.put(Position.GB1, 0.0); pawnPV.put(Position.GB2, 3.0); pawnPV.put(Position.GB3, -2.0); pawnPV.put(Position.GB4, 0.0);
+                pawnPV.put(Position.GC1, 0.0); pawnPV.put(Position.GC2, 3.0); pawnPV.put(Position.GC3, -2.0); pawnPV.put(Position.GC4, 0.0);
+                pawnPV.put(Position.GD1, 0.0); pawnPV.put(Position.GD2, -3.5); pawnPV.put(Position.GD3, 0.0); pawnPV.put(Position.GD4, 4.5);
+                pawnPV.put(Position.GE1, 0.0); pawnPV.put(Position.GE2, -3.5); pawnPV.put(Position.GE3, 0.0); pawnPV.put(Position.GE4, 4.5);
+                pawnPV.put(Position.GF1, 0.0); pawnPV.put(Position.GF2, 3.0); pawnPV.put(Position.GF3, -2.0); pawnPV.put(Position.GF4, 0.0);
+                pawnPV.put(Position.GG1, 0.0); pawnPV.put(Position.GG2, 3.0); pawnPV.put(Position.GG3, -2.0); pawnPV.put(Position.GG4, 0.0);
+                pawnPV.put(Position.GH1, 0.0); pawnPV.put(Position.GH2, 2.0); pawnPV.put(Position.GH3, 2.0); pawnPV.put(Position.GH4, 0.0);
+
+                pawnPV.put(Position.BH4, 2.0); pawnPV.put(Position.BH3, 2.5); pawnPV.put(Position.BH2, 4.0); pawnPV.put(Position.BH1, 4.2);
+                pawnPV.put(Position.BG4, 2.0); pawnPV.put(Position.BG3, 2.5); pawnPV.put(Position.BG2, 4.0); pawnPV.put(Position.BG1, 4.2);
+                pawnPV.put(Position.BF4, 2.0); pawnPV.put(Position.BF3, 2.7); pawnPV.put(Position.BF2, 4.0); pawnPV.put(Position.BF1, 4.2);
+                pawnPV.put(Position.BE4, 2.0); pawnPV.put(Position.BE3, 3.0); pawnPV.put(Position.BE2, 4.0); pawnPV.put(Position.BE1, 4.2);
+                pawnPV.put(Position.BD4, 2.0); pawnPV.put(Position.BD3, 2.5); pawnPV.put(Position.BD2, 4.0); pawnPV.put(Position.BD1, 4.2);
+                pawnPV.put(Position.BC4, 2.0); pawnPV.put(Position.BC3, 2.7); pawnPV.put(Position.BC2, 4.0); pawnPV.put(Position.BC1, 4.2);
+                pawnPV.put(Position.BB4, 2.0); pawnPV.put(Position.BB3, 2.5); pawnPV.put(Position.BB2, 4.0); pawnPV.put(Position.BB1, 4.2);
+                pawnPV.put(Position.BA4, 2.0); pawnPV.put(Position.BA3, 2.5); pawnPV.put(Position.BA2, 4.0); pawnPV.put(Position.BA1, 4.2);
+
+                pawnPV.put(Position.RH4, 2.0); pawnPV.put(Position.RH3, 2.5); pawnPV.put(Position.RH2, 4.0); pawnPV.put(Position.RH1, 4.2);
+                pawnPV.put(Position.RH4, 2.0); pawnPV.put(Position.RG3, 2.5); pawnPV.put(Position.RG2, 4.0); pawnPV.put(Position.RG1, 4.2);
+                pawnPV.put(Position.RF4, 2.0); pawnPV.put(Position.RF3, 2.7); pawnPV.put(Position.RF2, 4.0); pawnPV.put(Position.RF1, 4.2);
+                pawnPV.put(Position.RE4, 2.0); pawnPV.put(Position.RE3, 3.0); pawnPV.put(Position.RE2, 4.0); pawnPV.put(Position.RE1, 4.2);
+                pawnPV.put(Position.RD4, 2.0); pawnPV.put(Position.RD3, 2.5); pawnPV.put(Position.RD2, 4.0); pawnPV.put(Position.RD1, 4.2);
+                pawnPV.put(Position.RC4, 2.0); pawnPV.put(Position.RC3, 2.7); pawnPV.put(Position.RC2, 4.0); pawnPV.put(Position.RC1, 4.2);
+                pawnPV.put(Position.RB4, 2.0); pawnPV.put(Position.RB3, 2.5); pawnPV.put(Position.RB2, 4.0); pawnPV.put(Position.RB1, 4.2);
+                pawnPV.put(Position.RA4, 2.0); pawnPV.put(Position.RA3, 2.5); pawnPV.put(Position.RA2, 4.0); pawnPV.put(Position.RA1, 4.2);
+
+
+                knightPV.put(Position.GA1, -3.7); knightPV.put(Position.GA2, -3.5); knightPV.put(Position.GA3, -3.0); knightPV.put(Position.GA4, -3.0);
+                knightPV.put(Position.GB1, -3.5); knightPV.put(Position.GB2, -2.0); knightPV.put(Position.GB3, 0.8); knightPV.put(Position.GB4, 0.0);
+                knightPV.put(Position.GC1, -3.0); knightPV.put(Position.GC2, 0.0); knightPV.put(Position.GC3, 0.8); knightPV.put(Position.GC4, 1.0);
+                knightPV.put(Position.GD1, -3.0); knightPV.put(Position.GD2, 0.0); knightPV.put(Position.GD3, 0.8); knightPV.put(Position.GD4, 1.5);
+                knightPV.put(Position.GE1, -3.0); knightPV.put(Position.GE2, 0.0); knightPV.put(Position.GE3, 0.8); knightPV.put(Position.GE4, 1.5);
+                knightPV.put(Position.GF1, -3.0); knightPV.put(Position.GF2, 0.0); knightPV.put(Position.GF3, 0.8); knightPV.put(Position.GF4, 1.0);
+                knightPV.put(Position.GG1, -3.5); knightPV.put(Position.GG2, -2.0); knightPV.put(Position.GG3, -0.8); knightPV.put(Position.GG4, 0.0);
+                knightPV.put(Position.GH1, -3.7); knightPV.put(Position.GH2, -3.5); knightPV.put(Position.GH3, -3.0); knightPV.put(Position.GH4, -3.0);
+
+                knightPV.put(Position.BH4, -3.0); knightPV.put(Position.BH3, -3.0); knightPV.put(Position.BH2, -3.5); knightPV.put(Position.BH1, -3.7);
+                knightPV.put(Position.BG4, 0.8); knightPV.put(Position.BG3, 0.0); knightPV.put(Position.BG2, -2.0); knightPV.put(Position.BG1, -3.5);
+                knightPV.put(Position.BF4, 1.0); knightPV.put(Position.BF3, 0.8); knightPV.put(Position.BF2, 0.0); knightPV.put(Position.BF1, -3.0);
+                knightPV.put(Position.BE4, 1.5); knightPV.put(Position.BE3, 0.8); knightPV.put(Position.BE2, 0.0); knightPV.put(Position.BE1, -3.0);
+                knightPV.put(Position.BD4, 1.5); knightPV.put(Position.BD3, 0.8); knightPV.put(Position.BD2, 0.0); knightPV.put(Position.BD1, -3.0);
+                knightPV.put(Position.BC4, 1.0); knightPV.put(Position.BC3, 0.8); knightPV.put(Position.BC2, 0.0); knightPV.put(Position.BC1, -3.0);
+                knightPV.put(Position.BB4, 0.0); knightPV.put(Position.BB3, 0.8); knightPV.put(Position.BB2, -2.0); knightPV.put(Position.BB1, -3.5);
+                knightPV.put(Position.BA4, -3.0); knightPV.put(Position.BA3, -3.0); knightPV.put(Position.BA2, -3.5); knightPV.put(Position.BA1, -3.7);
+
+                knightPV.put(Position.RH4, -3.0); knightPV.put(Position.RH3, -3.0); knightPV.put(Position.RH2, -3.5); knightPV.put(Position.RH1, -3.7);
+                knightPV.put(Position.RH4, 0.8); knightPV.put(Position.RG3, 0.0); knightPV.put(Position.RG2, -2.0); knightPV.put(Position.RG1, -3.5);
+                knightPV.put(Position.RF4, 1.0); knightPV.put(Position.RF3, 0.8); knightPV.put(Position.RF2, 0.0); knightPV.put(Position.RF1, -3.0);
+                knightPV.put(Position.RE4, 1.5); knightPV.put(Position.RE3, 0.8); knightPV.put(Position.RE2, 0.0); knightPV.put(Position.RE1, -3.0);
+                knightPV.put(Position.RD4, 1.5); knightPV.put(Position.RD3, 0.8); knightPV.put(Position.RD2, 0.0); knightPV.put(Position.RD1, -3.0);
+                knightPV.put(Position.RC4, 1.0); knightPV.put(Position.RC3, 0.8); knightPV.put(Position.RC2, 0.0); knightPV.put(Position.RC1, -3.0);
+                knightPV.put(Position.RB4, 0.0); knightPV.put(Position.RB3, 0.8); knightPV.put(Position.RB2, -2.0); knightPV.put(Position.RB1, -3.5);
+                knightPV.put(Position.RA4, -3.0); knightPV.put(Position.RA3, -3.0); knightPV.put(Position.RA2, -3.5); knightPV.put(Position.RA1, -3.7);
+
+
+                bishopPV.put(Position.GA1, -2.0); bishopPV.put(Position.GA2, -1.0); bishopPV.put(Position.GA3, -1.0); bishopPV.put(Position.GA4, -1.0);
+                bishopPV.put(Position.GB1, -1.0); bishopPV.put(Position.GB2, 0.5); bishopPV.put(Position.GB3, 0.8); bishopPV.put(Position.GB4, 0.0);
+                bishopPV.put(Position.GC1, -1.0); bishopPV.put(Position.GC2, 0.0); bishopPV.put(Position.GC3, 0.8); bishopPV.put(Position.GC4, 0.8);
+                bishopPV.put(Position.GD1, -1.0); bishopPV.put(Position.GD2, 0.0); bishopPV.put(Position.GD3, 0.8); bishopPV.put(Position.GD4, 0.8);
+                bishopPV.put(Position.GE1, -1.0); bishopPV.put(Position.GE2, 0.0); bishopPV.put(Position.GE3, 0.8); bishopPV.put(Position.GE4, 0.8);
+                bishopPV.put(Position.GF1, -1.0); bishopPV.put(Position.GF2, 0.0); bishopPV.put(Position.GF3, 0.8); bishopPV.put(Position.GF4, 0.8);
+                bishopPV.put(Position.GG1, -1.0); bishopPV.put(Position.GG2, 0.5); bishopPV.put(Position.GG3, 0.8); bishopPV.put(Position.GG4, 0.0);
+                bishopPV.put(Position.GH1, -2.0); bishopPV.put(Position.GH2, -1.5); bishopPV.put(Position.GH3, -1.0); bishopPV.put(Position.GH4, -1.0);
+
+                bishopPV.put(Position.BH4, -1.0); bishopPV.put(Position.BH3, -1.0); bishopPV.put(Position.BH2, -1.5); bishopPV.put(Position.BH1, -2.0);
+                bishopPV.put(Position.BG4, 0.0); bishopPV.put(Position.BG3, 0.8); bishopPV.put(Position.BG2, 0.5); bishopPV.put(Position.BG1, -1.0);
+                bishopPV.put(Position.BF4, 0.8); bishopPV.put(Position.BF3, 0.8); bishopPV.put(Position.BF2, 0.0); bishopPV.put(Position.BF1, -1.0);
+                bishopPV.put(Position.BE4, 0.8); bishopPV.put(Position.BE3, 0.8); bishopPV.put(Position.BE2, 0.0); bishopPV.put(Position.BE1, -1.0);
+                bishopPV.put(Position.BD4, 0.8); bishopPV.put(Position.BD3, 0.8); bishopPV.put(Position.BD2, 0.0); bishopPV.put(Position.BD1, -1.0);
+                bishopPV.put(Position.BC4, 0.8); bishopPV.put(Position.BC3, 0.8); bishopPV.put(Position.BC2, 0.0); bishopPV.put(Position.BC1, -1.0);
+                bishopPV.put(Position.BB4, 0.0); bishopPV.put(Position.BB3, 0.8); bishopPV.put(Position.BB2, 0.5); bishopPV.put(Position.BB1, -1.0);
+                bishopPV.put(Position.BA4, -1.0); bishopPV.put(Position.BA3, -1.0); bishopPV.put(Position.BA2, -1.5); bishopPV.put(Position.BA1, -2.0);
+
+                bishopPV.put(Position.RH4, -1.0); bishopPV.put(Position.RH3, -1.0); bishopPV.put(Position.RH2, -1.5); bishopPV.put(Position.RH1, -2.0);
+                bishopPV.put(Position.RG4, 0.0); bishopPV.put(Position.RG3, 0.8); bishopPV.put(Position.RG2, 0.5); bishopPV.put(Position.RG1, -1.0);
+                bishopPV.put(Position.RF4, 0.8); bishopPV.put(Position.RF3, 0.8); bishopPV.put(Position.RF2, 0.0); bishopPV.put(Position.RF1, -1.0);
+                bishopPV.put(Position.RE4, 0.8); bishopPV.put(Position.RE3, 0.8); bishopPV.put(Position.RE2, 0.0); bishopPV.put(Position.RE1, -1.0);
+                bishopPV.put(Position.RD4, 0.8); bishopPV.put(Position.RD3, 0.8); bishopPV.put(Position.RD2, 0.0); bishopPV.put(Position.RD1, -1.0);
+                bishopPV.put(Position.RC4, 0.8); bishopPV.put(Position.RC3, 0.8); bishopPV.put(Position.RC2, 0.0); bishopPV.put(Position.RC1, -1.0);
+                bishopPV.put(Position.RB4, 0.0); bishopPV.put(Position.RB3, 0.8); bishopPV.put(Position.RB2, 0.5); bishopPV.put(Position.RB1, -1.0);
+                bishopPV.put(Position.RA4, -1.0); bishopPV.put(Position.RA3, -1.0); bishopPV.put(Position.RA2, -1.5); bishopPV.put(Position.RA1, -2.0);
+
+
+                rookPV.put(Position.GA1, 0.0); rookPV.put(Position.GA2, -0.5); rookPV.put(Position.GA3, -0.5); rookPV.put(Position.GA4, -0.5);
+                rookPV.put(Position.GB1, 0.0); rookPV.put(Position.GB2, 0.0); rookPV.put(Position.GB3, 0.0); rookPV.put(Position.GB4, 0.0);
+                rookPV.put(Position.GC1, 0.0); rookPV.put(Position.GC2, 0.0); rookPV.put(Position.GC3, 0.0); rookPV.put(Position.GC4, 0.0);
+                rookPV.put(Position.GD1, 0.5); rookPV.put(Position.GD2, 0.0); rookPV.put(Position.GD3, 0.0); rookPV.put(Position.GD4, 0.0);
+                rookPV.put(Position.GE1, 0.5); rookPV.put(Position.GE2, 0.0); rookPV.put(Position.GE3, 0.0); rookPV.put(Position.GE4, 0.0);
+                rookPV.put(Position.GF1, 0.0); rookPV.put(Position.GF2, 0.0); rookPV.put(Position.GF3, 0.0); rookPV.put(Position.GF4, 0.0);
+                rookPV.put(Position.GG1, 0.0); rookPV.put(Position.GG2, 0.0); rookPV.put(Position.GG3, 0.0); rookPV.put(Position.GG4, 0.0);
+                rookPV.put(Position.GH1, -0.0); rookPV.put(Position.GH2, -0.5); rookPV.put(Position.GH3, -0.5); rookPV.put(Position.GH4, -0.5);
+
+                rookPV.put(Position.BH4, -0.5); rookPV.put(Position.BH3, -0.5); rookPV.put(Position.BH2, 0.5); rookPV.put(Position.BH1, 0.0);
+                rookPV.put(Position.BG4, 0.0); rookPV.put(Position.BG3, 0.0); rookPV.put(Position.BG2, 1.0); rookPV.put(Position.BG1, 0.0);
+                rookPV.put(Position.BF4, 0.0); rookPV.put(Position.BF3, 0.0); rookPV.put(Position.BF2, 1.0); rookPV.put(Position.BF1, 0.0);
+                rookPV.put(Position.BE4, 0.0); rookPV.put(Position.BE3, 0.0); rookPV.put(Position.BE2, 1.0); rookPV.put(Position.BE1, 0.0);
+                rookPV.put(Position.BD4, 0.0); rookPV.put(Position.BD3, 0.0); rookPV.put(Position.BD2, 1.0); rookPV.put(Position.BD1, 0.0);
+                rookPV.put(Position.BC4, 0.0); rookPV.put(Position.BC3, 0.0); rookPV.put(Position.BC2, 1.0); rookPV.put(Position.BC1, 0.0);
+                rookPV.put(Position.BB4, 0.0); rookPV.put(Position.BB3, 0.0); rookPV.put(Position.BB2, 1.0); rookPV.put(Position.BB1, 0.0);
+                rookPV.put(Position.BA4, -0.5); rookPV.put(Position.BA3, -0.5); rookPV.put(Position.BA2, 0.5); rookPV.put(Position.BA1, 0.0);
+
+                rookPV.put(Position.RH4, -0.5); rookPV.put(Position.RH3, -0.5); rookPV.put(Position.RH2, 0.5); rookPV.put(Position.RH1, 0.0);
+                rookPV.put(Position.RG4, 0.0); rookPV.put(Position.RG3, 0.0); rookPV.put(Position.RG2, 1.0); rookPV.put(Position.RG1, 0.0);
+                rookPV.put(Position.RF4, 0.0); rookPV.put(Position.RF3, 0.0); rookPV.put(Position.RF2, 1.0); rookPV.put(Position.RF1, 0.0);
+                rookPV.put(Position.RE4, 0.0); rookPV.put(Position.RE3, 0.0); rookPV.put(Position.RE2, 1.0); rookPV.put(Position.RE1, 0.0);
+                rookPV.put(Position.RD4, 0.0); rookPV.put(Position.RD3, 0.0); rookPV.put(Position.RD2, 1.0); rookPV.put(Position.RD1, 0.0);
+                rookPV.put(Position.RC4, 0.0); rookPV.put(Position.RC3, 0.0); rookPV.put(Position.RC2, 1.0); rookPV.put(Position.RC1, 0.0);
+                rookPV.put(Position.RB4, 0.0); rookPV.put(Position.RB3, 0.0); rookPV.put(Position.RB2, 1.0); rookPV.put(Position.RB1, 0.0);
+                rookPV.put(Position.RA4, -0.5); rookPV.put(Position.RA3, -0.5); rookPV.put(Position.RA2, 0.5); rookPV.put(Position.RA1, 0.0);
+
+
+                queenPV.put(Position.GA1, -1.8); queenPV.put(Position.GA2, -0.9); queenPV.put(Position.GA3, -0.9); queenPV.put(Position.GA4, 0.0);
+                queenPV.put(Position.GB1, -0.9); queenPV.put(Position.GB2, 0.0); queenPV.put(Position.GB3, 0.6); queenPV.put(Position.GB4, 0.0);
+                queenPV.put(Position.GC1, -0.9); queenPV.put(Position.GC2, 0.6); queenPV.put(Position.GC3, 0.6); queenPV.put(Position.GC4, 0.6);
+                queenPV.put(Position.GD1, -0.6); queenPV.put(Position.GD2, 0.6); queenPV.put(Position.GD3, 0.6); queenPV.put(Position.GD4, 0.6);
+                queenPV.put(Position.GE1, -0.6); queenPV.put(Position.GE2, 0.6); queenPV.put(Position.GE3, 0.6); queenPV.put(Position.GE4, 0.6);
+                queenPV.put(Position.GF1, -0.9); queenPV.put(Position.GF2, 0.6); queenPV.put(Position.GF3, 0.6); queenPV.put(Position.GF4, 0.6);
+                queenPV.put(Position.GG1, -0.9); queenPV.put(Position.GG2, 0.0); queenPV.put(Position.GG3, 0.6); queenPV.put(Position.GG4, 0.0);
+                queenPV.put(Position.GH1, -1.8); queenPV.put(Position.GH2, -0.9); queenPV.put(Position.BH3, -0.9); queenPV.put(Position.GH4, 0.0);
+
+                queenPV.put(Position.BH4, -0.6); queenPV.put(Position.BH3, -0.9); queenPV.put(Position.BH2, -0.9); queenPV.put(Position.BH1, -1.8);
+                queenPV.put(Position.BG4, 0.6); queenPV.put(Position.BG3, 0.0); queenPV.put(Position.BG2, 0.0); queenPV.put(Position.BG1, -0.9);
+                queenPV.put(Position.BF4, 0.6); queenPV.put(Position.BF3, 0.6); queenPV.put(Position.BF2, 0.0); queenPV.put(Position.BF1, -0.9);
+                queenPV.put(Position.BE4, 0.6); queenPV.put(Position.BE3, 0.6); queenPV.put(Position.BE2, 0.0); queenPV.put(Position.BE1, -0.6);
+                queenPV.put(Position.BD4, 0.6); queenPV.put(Position.BD3, 0.6); queenPV.put(Position.BD2, 0.0); queenPV.put(Position.BD1, -0.6);
+                queenPV.put(Position.BC4, 0.6); queenPV.put(Position.BC3, 0.6); queenPV.put(Position.BC2, 0.0); queenPV.put(Position.BC1, -0.6);
+                queenPV.put(Position.BB4, 0.6); queenPV.put(Position.BB3, 0.0); queenPV.put(Position.BB2, 0.0); queenPV.put(Position.BB1, -0.9);
+                queenPV.put(Position.BA4, -0.6); queenPV.put(Position.BA3, -0.9); queenPV.put(Position.BA2, -0.9); queenPV.put(Position.BA1, -1.8);
+
+                queenPV.put(Position.RH4, -0.6); queenPV.put(Position.RH3, -0.9); queenPV.put(Position.RH2, -0.9); queenPV.put(Position.RH1, -1.8);
+                queenPV.put(Position.RG4, 0.6); queenPV.put(Position.RG3, 0.0); queenPV.put(Position.RG2, 0.0); queenPV.put(Position.RG1, -0.9);
+                queenPV.put(Position.RF4, 0.6); queenPV.put(Position.RF3, 0.6); queenPV.put(Position.RF2, 0.0); queenPV.put(Position.RF1, -0.9);
+                queenPV.put(Position.RE4, 0.6); queenPV.put(Position.RE3, 0.6); queenPV.put(Position.RE2, 0.0); queenPV.put(Position.RE1, -0.6);
+                queenPV.put(Position.RD4, 0.6); queenPV.put(Position.RD3, 0.6); queenPV.put(Position.RD2, 0.0); queenPV.put(Position.RD1, -0.6);
+                queenPV.put(Position.RC4, 0.6); queenPV.put(Position.RC3, 0.6); queenPV.put(Position.RC2, 0.0); queenPV.put(Position.RC1, -0.6);
+                queenPV.put(Position.RB4, 0.6); queenPV.put(Position.RB3, 0.0); queenPV.put(Position.RB2, 0.0); queenPV.put(Position.RB1, -0.9);
+                queenPV.put(Position.RA4, -0.6); queenPV.put(Position.RA3, -0.9); queenPV.put(Position.RA2, -0.9); queenPV.put(Position.RA1, -1.8);
+
+
+                kingPV.put(Position.GA1, 2.0); kingPV.put(Position.GA2, 2.0); kingPV.put(Position.GA3, -1.0); kingPV.put(Position.GA4, -2.0);
+                kingPV.put(Position.GB1, 3.0); kingPV.put(Position.GB2, 2.0); kingPV.put(Position.GB3, -2.0); kingPV.put(Position.GB4, -3.0);
+                kingPV.put(Position.GC1, 1.0); kingPV.put(Position.GC2, 0.0); kingPV.put(Position.GC3, -2.0); kingPV.put(Position.GC4, -3.0);
+                kingPV.put(Position.GD1, 0.0); kingPV.put(Position.GD2, 0.0); kingPV.put(Position.GD3, -2.0); kingPV.put(Position.GD4, -4.0);
+                kingPV.put(Position.GE1, 0.0); kingPV.put(Position.GE2, 0.0); kingPV.put(Position.GE3, -2.0); kingPV.put(Position.GE4, -4.0);
+                kingPV.put(Position.GF1, 1.0); kingPV.put(Position.GF2, 0.0); kingPV.put(Position.GF3, -2.0); kingPV.put(Position.GF4, -3.0);
+                kingPV.put(Position.GG1, 3.0); kingPV.put(Position.GG2, 2.0); kingPV.put(Position.GG3, -2.0); kingPV.put(Position.GG4, -3.0);
+                kingPV.put(Position.GH1, 2.0); kingPV.put(Position.GH2, 2.0); kingPV.put(Position.GH3, -1.0); kingPV.put(Position.GH4, -2.0);
+
+                kingPV.put(Position.BH4, -3.0); kingPV.put(Position.BH3, -3.0); kingPV.put(Position.BH2, -3.0); kingPV.put(Position.BH1, -3.0);
+                kingPV.put(Position.BG4, -4.0); kingPV.put(Position.BG3, -4.0); kingPV.put(Position.BG2, -4.0); kingPV.put(Position.BG1, -4.0);
+                kingPV.put(Position.BF4, -4.0); kingPV.put(Position.BF3, -4.0); kingPV.put(Position.BF2, -4.0); kingPV.put(Position.BF1, -4.0);
+                kingPV.put(Position.BE4, -5.0); kingPV.put(Position.BE3, -5.0); kingPV.put(Position.BE2, -5.0); kingPV.put(Position.BE1, -5.0);
+                kingPV.put(Position.BD4, -5.0); kingPV.put(Position.BD3, -5.0); kingPV.put(Position.BD2, -5.0); kingPV.put(Position.BD1, -5.0);
+                kingPV.put(Position.BC4, -4.0); kingPV.put(Position.BC3, -4.0); kingPV.put(Position.BC2, -4.0); kingPV.put(Position.BC1, -4.0);
+                kingPV.put(Position.BB4, -4.0); kingPV.put(Position.BB3, -4.0); kingPV.put(Position.BB2, -4.0); kingPV.put(Position.BB1, -4.0);
+                kingPV.put(Position.BA4, -3.0); kingPV.put(Position.BA3, -3.0); kingPV.put(Position.BA2, -3.0); kingPV.put(Position.BA1, -3.0);
+
+                kingPV.put(Position.RH4, -3.0); kingPV.put(Position.RH3, -3.0); kingPV.put(Position.RH2, -3.0); kingPV.put(Position.RH1, -3.0);
+                kingPV.put(Position.RG4, -4.0); kingPV.put(Position.RG3, -4.0); kingPV.put(Position.RG2, -4.0); kingPV.put(Position.RG1, -4.0);
+                kingPV.put(Position.RF4, -4.0); kingPV.put(Position.RF3, -4.0); kingPV.put(Position.RF2, -4.0); kingPV.put(Position.RF1, -4.0);
+                kingPV.put(Position.RE4, -5.0); kingPV.put(Position.RE3, -5.0); kingPV.put(Position.RE2, -5.0); kingPV.put(Position.RE1, -5.0);
+                kingPV.put(Position.RD4, -5.0); kingPV.put(Position.RD3, -5.0); kingPV.put(Position.RD2, -5.0); kingPV.put(Position.RD1, -5.0);
+                kingPV.put(Position.RC4, -4.0); kingPV.put(Position.RC3, -4.0); kingPV.put(Position.RC2, -4.0); kingPV.put(Position.RC1, -4.0);
+                kingPV.put(Position.RB4, -4.0); kingPV.put(Position.RB3, -4.0); kingPV.put(Position.RB2, -4.0); kingPV.put(Position.RB1, -4.0);
+                kingPV.put(Position.RA4, -3.0); kingPV.put(Position.RA3, -3.0); kingPV.put(Position.RA2, -3.0); kingPV.put(Position.RA1, -3.0);
 
                 break;
 
             default:
+                System.out.print("If you are seeing this, something is wrong. No color was given.");
                 break;
         }
     }
@@ -430,10 +819,7 @@ public class QLearningAgent extends Agent {
         }
     }
 
-    /*
-     * ------------------------------------------------------- Public Functions
-     * -------------------------------------------------------
-     */
+    /*------------------------------------------------------- Public Functions -------------------------------------------------------*/
 
     /**
      * Play a move in the game. The agent is given a Board Object representing the
