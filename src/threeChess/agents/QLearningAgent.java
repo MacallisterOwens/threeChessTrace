@@ -27,11 +27,12 @@ class StateAction implements Serializable {
 }
 
 /**
- * @todo: Implement amInCheck, canPutOtherInCheck, update reward function to also check for center board control, piece mobility, and king saftey
+ * @todo: Implement amInCheck, canPutOtherInCheck, update reward function to
+ *        also check for center board control, piece mobility, and king saftey
  * 
- * Q-Learning Transition Rule: Qnew(state_t, action_t) = Qold(state_t, action_t)
- * + learningRate * (reward_t + maxQ(next_state,
- * every_possible_action_in_next_state) - Qold(state_t, action_t))
+ *        Q-Learning Transition Rule: Qnew(state_t, action_t) = Qold(state_t,
+ *        action_t) + learningRate * (reward_t + maxQ(next_state,
+ *        every_possible_action_in_next_state) - Qold(state_t, action_t))
  **/
 public class QLearningAgent extends Agent {
 
@@ -56,6 +57,22 @@ public class QLearningAgent extends Agent {
     double prevRewardValue; // The value of our pieces + our taken pieces + board position from the prev
                             // board state
 
+    HashMap<Position, Double> pawnPositionValue; // Maps the position on the board with a pawn's relative value on that
+                                                 // position
+    HashMap<Position, Double> knightPositionValue; // Maps the position on the board with a knight's relative value on
+                                                   // that position
+    HashMap<Position, Double> bishopPositionValue; // Maps the position on the board with a bishop's relative value on
+                                                   // that position
+    HashMap<Position, Double> rookPositionValue; // Maps the position on the board with a rook's relative value on that
+                                                 // position
+    HashMap<Position, Double> queenPositionValue; // Maps the position on the board with a queen's relative value on
+                                                  // that position
+    HashMap<Position, Double> kingPositionValue; // Maps the position on the board with a king's relative value on that
+                                                 // position
+
+    boolean haveMoved;
+    Colour myColour;
+
     HashMap<StateAction, Double> qTable; // The mapping of every single state-action pair to its value
     HashMap<StateAction, Integer> nTimesExecuted; // The mapping of every single state-action pair to the number of
                                                   // times that action has been taken in that state
@@ -71,6 +88,7 @@ public class QLearningAgent extends Agent {
         reward = 0;
         curReward = 0;
         prevRewardValue = 0;
+        haveMoved = false;
 
         qTable = new HashMap<StateAction, Double>();
         nTimesExecuted = new HashMap<StateAction, Integer>();
@@ -94,8 +112,131 @@ public class QLearningAgent extends Agent {
 
     }
 
-    
-    /* ------------------------------------------------------- Private Helper Functions ------------------------------------------------------- */
+    /*
+     * ------------------------------------------------------- Private Helper
+     * Functions -------------------------------------------------------
+     */
+
+    private void init() {
+        switch (myColour) {
+            case BLUE:
+                pawnPositionValue.put(Position.BA1, 0.0); pawnPositionValue.put(Position.BA2, 2.0);
+                pawnPositionValue.put(Position.BA3, 2.0); pawnPositionValue.put(Position.BA4, 0.0);
+                pawnPositionValue.put(Position.BB1, 0.0); pawnPositionValue.put(Position.BB2, 3.0);
+                pawnPositionValue.put(Position.BB3, -2.0); pawnPositionValue.put(Position.BB4, 0.0);
+                pawnPositionValue.put(Position.BC1, 0.0); pawnPositionValue.put(Position.BC2, 3.0);
+                pawnPositionValue.put(Position.BC3, -2.0); pawnPositionValue.put(Position.BC4, 0.0);
+                pawnPositionValue.put(Position.BD1, 0.0); pawnPositionValue.put(Position.BD2, -3.5);
+                pawnPositionValue.put(Position.BD3, 0.0); pawnPositionValue.put(Position.BD4, 4.5);
+                pawnPositionValue.put(Position.BE1, 0.0); pawnPositionValue.put(Position.BE2, -3.5);
+                pawnPositionValue.put(Position.BE3, 0.0); pawnPositionValue.put(Position.BE4, 4.5);
+                pawnPositionValue.put(Position.BF1, 0.0); pawnPositionValue.put(Position.BF2, 3.0);
+                pawnPositionValue.put(Position.BF3, -2.0); pawnPositionValue.put(Position.BF4, 0.0);
+                pawnPositionValue.put(Position.BG1, 0.0); pawnPositionValue.put(Position.BG2, 3.0);
+                pawnPositionValue.put(Position.BG3, -2.0); pawnPositionValue.put(Position.BG4, 0.0);
+                pawnPositionValue.put(Position.BH1, 0.0); pawnPositionValue.put(Position.BH2, 2.0);
+                pawnPositionValue.put(Position.BH3, 2.0); pawnPositionValue.put(Position.BH4, 0.0);
+
+                pawnPositionValue.put(Position.GH4, 2.0); pawnPositionValue.put(Position.GH3, 2.5);
+                pawnPositionValue.put(Position.GH2, 4.0); pawnPositionValue.put(Position.GH1, 4.2);
+                pawnPositionValue.put(Position.GG4, 2.0); pawnPositionValue.put(Position.GG3, 2.5);
+                pawnPositionValue.put(Position.GG2, 4.0); pawnPositionValue.put(Position.GG1, 4.2);
+                pawnPositionValue.put(Position.GF4, 2.0); pawnPositionValue.put(Position.GF3, 2.7);
+                pawnPositionValue.put(Position.GF2, 4.0); pawnPositionValue.put(Position.GF1, 4.2);
+                pawnPositionValue.put(Position.GE4, 2.0); pawnPositionValue.put(Position.GE3, 3.0);
+                pawnPositionValue.put(Position.GE2, 4.0); pawnPositionValue.put(Position.GE1, 4.2);
+                pawnPositionValue.put(Position.GD4, 2.0); pawnPositionValue.put(Position.GD3, 2.5);
+                pawnPositionValue.put(Position.GD2, 4.0); pawnPositionValue.put(Position.GD1, 4.2);
+                pawnPositionValue.put(Position.GC4, 2.0); pawnPositionValue.put(Position.GC3, 2.7);
+                pawnPositionValue.put(Position.GC2, 4.0); pawnPositionValue.put(Position.GC1, 4.2);
+                pawnPositionValue.put(Position.GB4, 2.0); pawnPositionValue.put(Position.GB3, 2.5);
+                pawnPositionValue.put(Position.GB2, 4.0); pawnPositionValue.put(Position.GB1, 4.2);
+                pawnPositionValue.put(Position.GA4, 2.0); pawnPositionValue.put(Position.GA3, 2.5);
+                pawnPositionValue.put(Position.GA2, 4.0); pawnPositionValue.put(Position.GA1, 4.2);
+
+                pawnPositionValue.put(Position.RH4, 2.0); pawnPositionValue.put(Position.RH3, 2.5);
+                pawnPositionValue.put(Position.RH2, 4.0); pawnPositionValue.put(Position.RH1, 4.2);
+                pawnPositionValue.put(Position.RH4, 2.0); pawnPositionValue.put(Position.RG3, 2.5);
+                pawnPositionValue.put(Position.RG2, 4.0); pawnPositionValue.put(Position.RG1, 4.2);
+                pawnPositionValue.put(Position.RF4, 2.0); pawnPositionValue.put(Position.RF3, 2.7);
+                pawnPositionValue.put(Position.RF2, 4.0); pawnPositionValue.put(Position.RF1, 4.2);
+                pawnPositionValue.put(Position.RE4, 2.0); pawnPositionValue.put(Position.RE3, 3.0);
+                pawnPositionValue.put(Position.RE2, 4.0); pawnPositionValue.put(Position.RE1, 4.2);
+                pawnPositionValue.put(Position.RD4, 2.0); pawnPositionValue.put(Position.RD3, 2.5);
+                pawnPositionValue.put(Position.RD2, 4.0); pawnPositionValue.put(Position.RD1, 4.2);
+                pawnPositionValue.put(Position.RC4, 2.0); pawnPositionValue.put(Position.RC3, 2.7);
+                pawnPositionValue.put(Position.RC2, 4.0); pawnPositionValue.put(Position.RC1, 4.2);
+                pawnPositionValue.put(Position.RB4, 2.0); pawnPositionValue.put(Position.RB3, 2.5);
+                pawnPositionValue.put(Position.RB2, 4.0); pawnPositionValue.put(Position.RB1, 4.2);
+                pawnPositionValue.put(Position.RA4, 2.0); pawnPositionValue.put(Position.RA3, 2.5);
+                pawnPositionValue.put(Position.RA2, 4.0); pawnPositionValue.put(Position.RA1, 4.2);
+
+
+
+                break;
+                
+            case RED:
+                pawnPositionValue.put(Position.RA1, 0.0); pawnPositionValue.put(Position.RA2, 2.0);
+                pawnPositionValue.put(Position.RA3, 2.0); pawnPositionValue.put(Position.RA4, 0.0);
+                pawnPositionValue.put(Position.RB1, 0.0); pawnPositionValue.put(Position.RB2, 3.0);
+                pawnPositionValue.put(Position.RB3, -2.0); pawnPositionValue.put(Position.RB4, 0.0);
+                pawnPositionValue.put(Position.RC1, 0.0); pawnPositionValue.put(Position.RC2, 3.0);
+                pawnPositionValue.put(Position.RC3, -2.0); pawnPositionValue.put(Position.RC4, 0.0);
+                pawnPositionValue.put(Position.RD1, 0.0); pawnPositionValue.put(Position.RD2, -3.5);
+                pawnPositionValue.put(Position.RD3, 0.0); pawnPositionValue.put(Position.RD4, 4.5);
+                pawnPositionValue.put(Position.RE1, 0.0); pawnPositionValue.put(Position.RE2, -3.5);
+                pawnPositionValue.put(Position.RE3, 0.0); pawnPositionValue.put(Position.RE4, 4.5);
+                pawnPositionValue.put(Position.RF1, 0.0); pawnPositionValue.put(Position.RF2, 3.0);
+                pawnPositionValue.put(Position.RF3, -2.0); pawnPositionValue.put(Position.RF4, 0.0);
+                pawnPositionValue.put(Position.RG1, 0.0); pawnPositionValue.put(Position.RG2, 3.0);
+                pawnPositionValue.put(Position.RG3, -2.0); pawnPositionValue.put(Position.RG4, 0.0);
+                pawnPositionValue.put(Position.RH1, 0.0); pawnPositionValue.put(Position.RH2, 2.0);
+                pawnPositionValue.put(Position.RH3, 2.0); pawnPositionValue.put(Position.RH4, 0.0);
+
+                pawnPositionValue.put(Position.GH4, 2.0); pawnPositionValue.put(Position.GH3, 2.5);
+                pawnPositionValue.put(Position.GH2, 4.0); pawnPositionValue.put(Position.GH1, 4.2);
+                pawnPositionValue.put(Position.GG4, 2.0); pawnPositionValue.put(Position.GG3, 2.5);
+                pawnPositionValue.put(Position.GG2, 4.0); pawnPositionValue.put(Position.GG1, 4.2);
+                pawnPositionValue.put(Position.GF4, 2.0); pawnPositionValue.put(Position.GF3, 2.7);
+                pawnPositionValue.put(Position.GF2, 4.0); pawnPositionValue.put(Position.GF1, 4.2);
+                pawnPositionValue.put(Position.GE4, 2.0); pawnPositionValue.put(Position.GE3, 3.0);
+                pawnPositionValue.put(Position.GE2, 4.0); pawnPositionValue.put(Position.GE1, 4.2);
+                pawnPositionValue.put(Position.GD4, 2.0); pawnPositionValue.put(Position.GD3, 2.5);
+                pawnPositionValue.put(Position.GD2, 4.0); pawnPositionValue.put(Position.GD1, 4.2);
+                pawnPositionValue.put(Position.GC4, 2.0); pawnPositionValue.put(Position.GC3, 2.7);
+                pawnPositionValue.put(Position.GC2, 4.0); pawnPositionValue.put(Position.GC1, 4.2);
+                pawnPositionValue.put(Position.GB4, 2.0); pawnPositionValue.put(Position.GB3, 2.5);
+                pawnPositionValue.put(Position.GB2, 4.0); pawnPositionValue.put(Position.GB1, 4.2);
+                pawnPositionValue.put(Position.GA4, 2.0); pawnPositionValue.put(Position.GA3, 2.5);
+                pawnPositionValue.put(Position.GA2, 4.0); pawnPositionValue.put(Position.GA1, 4.2);
+
+                pawnPositionValue.put(Position.BH4, 2.0); pawnPositionValue.put(Position.BH3, 2.5);
+                pawnPositionValue.put(Position.BH2, 4.0); pawnPositionValue.put(Position.BH1, 4.2);
+                pawnPositionValue.put(Position.BH4, 2.0); pawnPositionValue.put(Position.BG3, 2.5);
+                pawnPositionValue.put(Position.BG2, 4.0); pawnPositionValue.put(Position.BG1, 4.2);
+                pawnPositionValue.put(Position.BF4, 2.0); pawnPositionValue.put(Position.BF3, 2.7);
+                pawnPositionValue.put(Position.BF2, 4.0); pawnPositionValue.put(Position.BF1, 4.2);
+                pawnPositionValue.put(Position.BE4, 2.0); pawnPositionValue.put(Position.BE3, 3.0);
+                pawnPositionValue.put(Position.BE2, 4.0); pawnPositionValue.put(Position.BE1, 4.2);
+                pawnPositionValue.put(Position.BD4, 2.0); pawnPositionValue.put(Position.BD3, 2.5);
+                pawnPositionValue.put(Position.BD2, 4.0); pawnPositionValue.put(Position.BD1, 4.2);
+                pawnPositionValue.put(Position.BC4, 2.0); pawnPositionValue.put(Position.BC3, 2.7);
+                pawnPositionValue.put(Position.BC2, 4.0); pawnPositionValue.put(Position.BC1, 4.2);
+                pawnPositionValue.put(Position.BB4, 2.0); pawnPositionValue.put(Position.BB3, 2.5);
+                pawnPositionValue.put(Position.BB2, 4.0); pawnPositionValue.put(Position.BB1, 4.2);
+                pawnPositionValue.put(Position.BA4, 2.0); pawnPositionValue.put(Position.BA3, 2.5);
+                pawnPositionValue.put(Position.BA2, 4.0); pawnPositionValue.put(Position.BA1, 4.2);
+
+                break;
+
+            case GREEN:
+
+                break;
+
+            default:
+                break;
+        }
+    }
 
     /**
      * Returns a set of all availble moves for a given piece Moves are represented
@@ -233,16 +374,26 @@ public class QLearningAgent extends Agent {
 
     /**
      * Checks to see if we are currently under check
+     * 
      * @return true if under check, otherwise false
      */
     private boolean amUnderCheck() {
 
     }
 
+    /**
+     * Checks to see whether we can put an opponent in check
+     * 
+     * @return true if we can put an opponent in check, otherwise false
+     */
+    private boolean canPutOtherInCheck() {
+
+    }
+
     private double calculateCurrentReward() {
         double curRewardValue = curBoardState.score(curBoardState.getTurn());
 
-        if(prevRewardValue == 0) {
+        if (prevRewardValue == 0) {
             prevRewardValue = prevBoardState.score(prevBoardState.getTurn());
         }
 
@@ -279,7 +430,10 @@ public class QLearningAgent extends Agent {
         }
     }
 
-    /* ------------------------------------------------------- Public Functions -------------------------------------------------------*/
+    /*
+     * ------------------------------------------------------- Public Functions
+     * -------------------------------------------------------
+     */
 
     /**
      * Play a move in the game. The agent is given a Board Object representing the
@@ -293,13 +447,17 @@ public class QLearningAgent extends Agent {
      *         is the position to move that piece to.
      **/
     public Position[] playMove(Board board) {
+        if (!haveMoved) {
+            haveMoved = true;
+            myColour = board.getTurn();
+            init();
+        }
         curBoardState = board;
         curReward = calculateCurrentReward();
         update();
-        if(board.gameOver()) { // This should never happen... But just in case
+        if (board.gameOver()) { // This should never happen... But just in case
             return null;
         }
-
 
         return new Position[] { null, null };
     }
