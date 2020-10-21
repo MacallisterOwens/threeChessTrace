@@ -26,4 +26,4 @@ hs_err_pid*
 doc/
 
 #agent code
-src/threeChess/agents/
+#src/threeChess/agents/
