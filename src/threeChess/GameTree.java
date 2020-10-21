@@ -52,6 +52,7 @@ public class GameTree {
     // Traversal -------------------------------------------------------------------------------
 
     public void resetTraversal() {this.traversalNode = this.root; this.traversalDepth = 0;}
+    public boolean traversalIsLeaf() {return this.traversalNode.isLeaf();}
 
     /**
      * Method to traverse the tree in a single move
@@ -90,6 +91,23 @@ public class GameTree {
             }
         }
 
+        return true;
+    }
+
+    /**
+     * Add a new child node to the current traversal node
+     * @param move the ply leading to the game state of the new child, assumed to be valid + legal
+     * If the node already exists then the expansion will fail  
+     * @return true if the expansion succeeded, flase otherwise
+     */
+    public boolean expandTraversalNode(Position[] move) {
+        for (MCNode child : this.traversalNode.getChildren()) {
+            if (child.getMove() == move) {
+                return false;
+            }
+        }
+
+        this.traversalNode.addChild(move);
         return true;
     }
 
@@ -135,7 +153,7 @@ public class GameTree {
      * Class to maintain win/draw/loss statistics for Monte Carlo Tree Search
      * Will store a numerator and denominator to represent this
      * Numerator increased by: 1 for a win, 0.5 for a draw, 0 for a loss
-     * Denominator increased by 1 every time a MCTS runoff uses the move associated with this node
+     * Denominator increased by 1 every time a MCTS rollout uses the move associated with this node
      * Note that ALL ply (reprsented by Position[2]) are assumed to be valid and legal on the corresponding board 
      **/
     private class MCNode {
@@ -158,6 +176,7 @@ public class GameTree {
             this.parentMove = parentMove;
             this.numerator = 0.0;
             this.denominator = 0.0;
+            this.updateUCT();
         }
 
         //Getters and setters -------------------------------------------------------------------------------
@@ -224,16 +243,16 @@ public class GameTree {
         public boolean isLeaf() {return this.children.size() == 0;}
 
         /**
-         * Updater for MC runoffs
-         * @param result enumerates the result of the relevant runoff (1 = win, 0.5 = draw, 0 = loss)
+         * Updater for MC rollouts
+         * @param result enumerates the result of the relevant rollout (1 = win, 0.5 = draw, 0 = loss)
          **/
-        public void runoffUpdate(double result) {
+        public void rolloutUpdate(double result) {
             this.denominator++;
             this.numerator += result;
-            this.updateUCTFormula();
+            this.updateUCT();
 
             for (MCNode c : this.children) {
-                c.updateUCTFormula();
+                c.updateUCT();
             }
         
         }
@@ -278,8 +297,18 @@ public class GameTree {
          * @param node node to use in calculations
          * @return the result of the formula
          */
-        public void updateUCTFormula() {
-            this.uctResult = this.getFraction() + Math.sqrt(2*Math.log(this.parent.getDenominator()) / this.denominator);
+        public void updateUCT() {
+            if (this.numerator == 0) this.uctResult = Double.MAX_VALUE;
+            else this.uctResult = this.getFraction() + Math.sqrt(2*Math.log(this.parent.getDenominator()) / this.denominator);
+        }
+
+        /**
+         * Checks if two nodes are equal
+         * @param node the node to compare with
+         * @return true if the two nodes refer to the game state that corresponds to an identical series of ply
+         */
+        public boolean equals(MCNode node) {
+            return (this.parent == node.getParent() && this.parentMove == node.getMove());
         }
 
 

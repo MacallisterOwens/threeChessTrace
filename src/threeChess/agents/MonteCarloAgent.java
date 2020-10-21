@@ -11,8 +11,14 @@ public class MonteCarloAgent extends Agent {
     private static final String name = "Carlos the Monty";
     private boolean initialised; //Remember if we've initialised everything
     private Board workingBoard; //board to modify while traversing the game tree to validate moves
-    private HashMap<Piece, Position> pieceLocations; //Store piece locations in the position we are given to move from
-    private HashMap<Piece, Position> workingPieceLocations; //Store piece locations to enable fast lookups for move selection
+    //Manually keep track of piece position to avoid calling getPositions()
+    private HashMap<Piece, Position> redPieceLocations; 
+    private HashMap<Piece, Position> bluePieceLocations; 
+    private HashMap<Piece, Position> greenPieceLocations; 
+    //Store piece locations to enable fast lookups for selection phase of MCTS
+    private HashMap<Piece, Position> redWorkingPieceLocations; 
+    private HashMap<Piece, Position> blueWorkingPieceLocations; 
+    private HashMap<Piece, Position> greenWorkingPieceLocations; 
     private GameTree gameTree;
 
     public Position[] playMove(Board board) {
@@ -25,10 +31,26 @@ public class MonteCarloAgent extends Agent {
 
     // MCTS Methods ----------------------------------------------------------------------------
 
+    /**
+     * Choose a child node to expand to game completion
+     */
     private void selection() {
-        
+
+        //Traverse the tree until we reach a twig node
+        Position[] nextMove;
+        while(true) {
+
+            //A 'twig' node is any one that has not yet been fully expanded
+            //Check that here
+
+            nextMove = gameTree.uctSelectChild();
+            this.gameTree.traverse(nextMove);
+        }
     }
 
+    /**
+     * Create a new child node for the current traversal node
+     */
     private void expansion() {
         
     }
@@ -59,31 +81,42 @@ public class MonteCarloAgent extends Agent {
 
     /**
      * Method to update the piece location hashmap after a change to the workingBoard
+     * Uses the current workingBoard implementation to inform the changes
      * @param moves the moves taken since the last update, 
      */
     private void updateWorkingPieceLocations(Position[][] moves) {
-
+        for (Position[] move : moves) {
+            
+        }
     }
 
     /**
      * Reset workingPieceLocations to match the initila game state
      */
     private void resetWorkingPieceLocations() {
-        this.workingPieceLocations = new HashMap<Piece, Position>();
-        this.workingPieceLocations.putAll(this.pieceLocations);
+        this.redWorkingPieceLocations = new HashMap<Piece, Position>();
+        this.blueWorkingPieceLocations = new HashMap<Piece, Position>();
+        this.greenWorkingPieceLocations = new HashMap<Piece, Position>();
+        this.redWorkingPieceLocations.putAll(this.redPieceLocations);
+        this.blueWorkingPieceLocations.putAll(this.bluePieceLocations);
+        this.greenWorkingPieceLocations.putAll(this.greenPieceLocations);
     }
 
     /**Method to initliase the pieceLocation HashMap
      * @param board the game state to inform the initialization
      */
     private void initPieceLocations(Board board) {
-        this.pieceLocations = new HashMap<Piece, Position>();
-        //Use the board getPositions() method to add each players pieces to the hashmap
+        this.redPieceLocations = new HashMap<Piece, Position>();
+        this.bluePieceLocations = new HashMap<Piece, Position>();
+        this.greenPieceLocations = new HashMap<Piece, Position>();
+        //Use the board getPositions() method to add each players pieces to each hashmap
         //Need to reverse the representation returned by getPositions (<Position, Piece> to <Piece, Position>)
-        for (Colour c : Colour.values()) {
-            for (Position p : board.getPositions(c)) {
-                this.pieceLocations.put(board.getPiece(p), p);
-            }
+        for (Position p : board.getPositions(Colour.RED)) {
+            this.redPieceLocations.put(board.getPiece(p), p);
+        } for (Position p : board.getPositions(Colour.BLUE)) {
+            this.bluePieceLocations.put(board.getPiece(p), p);
+        } for (Position p : board.getPositions(Colour.GREEN)) {
+            this.greenPieceLocations.put(board.getPiece(p), p);
         }
     }
 
@@ -108,6 +141,68 @@ public class MonteCarloAgent extends Agent {
                 //Convert num_moves to an index, then get the two most recent entries
                 return new Position[][] {board.getMove((num_moves - 1) - 1), board.getMove(num_moves - 1)};
         }
+    }
+
+    /**
+     * Returns a set of all availble moves for a given piece based on the working board
+     * Moves are represented with the standard {start, end} position array
+     * @param position representation of where the given piece is located on the board
+     * @return a set containing all possible moves for a given piece
+     *
+     **/
+    private HashSet<Position[]> getAvailableMoves(Position position) {
+
+    Piece mover = this.workingBoard.getPiece(position);
+    PieceType moverType = mover.getType();
+
+    HashSet<Position[]> possibleMoves= new HashSet<Position[]>();
+    Position p;
+
+    for (Direction[] moves : moverType.getSteps()) { //iterate over every possible step a piece can make
+
+        p = position;
+
+        for (int i = 1; i <= moverType.getStepReps(); i++) { //iterate that step as many times as possible to check every possible move
+            try { //try the move
+                p = this.workingBoard.step(mover, moves, p);
+                if (this.workingBoard.isLegalMove(position, p)) possibleMoves.add(new Position[] {position, p}); //move is good, add it to the list
+            } catch(ImpossiblePositionException e) { 
+                break; //ended up in an illegal position, abandon that step and try another
+            }
+
+        }
+    }
+
+    return possibleMoves;
+
+    }
+
+    /**
+     * Returns all possible moves a player can make based on the working board
+     */
+    private HashSet<Position[]> getAllAvailableMoves(Colour player) {
+
+        HashSet<Position[]> allMoves = new HashSet<Position[]>();
+        HashMap<Piece, Position> pieceLocations = new HashMap<Piece, Position>();
+
+        switch (player) {
+            case RED:
+                pieceLocations = this.redWorkingPieceLocations;
+                break;
+            case BLUE:
+                pieceLocations = this.blueWorkingPieceLocations;
+                break;
+            case GREEN:
+                pieceLocations = this.greenWorkingPieceLocations;
+                break;    
+        }
+
+        for (Position p : pieceLocations.values()) {
+            allMoves.addAll(this.getAvailableMoves(p));
+        }
+
+        return allMoves;
+
     }
 
 
