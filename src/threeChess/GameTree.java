@@ -1,5 +1,7 @@
 package threeChess;
 import java.util.*;
+import java.lang.Math;
+
 
 /**
  * Class to represent the possible future game states of any three chess position
@@ -11,24 +13,9 @@ import java.util.*;
 
 public class GameTree {
 
-    /**
-     * Node interface to allow for parameterisation of GameTree
-     * Nodes have one parent and any number of children
-     * Each nodes stores the ply that immediately precedes it as Position[]
-     * As such, adjacent nodes are linked by a size-2 Position array
-     */
-    private interface Node {
-        public Node getParent();
-        public void setParent(Node N);
-        public Node getChild(Position[] P);
-        public void addChild(Node N);
-        public ArrayList<Node> getChildren();
-        public Position[] getMove();
-    }
-
-    private Node root; //Root node 
+    private MCNode root; //Root node 
     private Colour rootPlayer; //Keeps track of whose ply it is in the root game state
-    private Node traversalNode; //Keep track of location in tree when traversing
+    private MCNode traversalNode; //Keep track of location in tree when traversing
     private int traversalDepth; //Keeps track of how many ply deep the current traversal is
 
     /**
@@ -36,7 +23,7 @@ public class GameTree {
      * @param root the node to use as the root for the tree
      * @param player the current turn for the root game state
      **/
-    public GameTree(Node root, Colour player) {
+    public GameTree(MCNode root, Colour player) {
         this.root = root;
         this.traversalNode = root;
         this.traversalDepth = 0;
@@ -56,8 +43,8 @@ public class GameTree {
 
     //Getters and setters -------------------------------------------------------------------------------
 
-    public Node getRoot() {return this.root;}
-    public Node getCurrentNode() {return this.traversalNode;}
+    public MCNode getRoot() {return this.root;}
+    public MCNode getCurrentNode() {return this.traversalNode;}
     public Colour getRootPlayer() {return this.rootPlayer;}
     public int getTraversalDepth() {return this.traversalDepth;}
     public Colour getTraversalPlayer() {return Colour.values()[(this.rootPlayer.ordinal() + this.traversalDepth) % 3];}
@@ -72,7 +59,7 @@ public class GameTree {
      * @return true if traversal successfully occured, false if no such child was found
      **/
     public boolean traverse(Position[] move) {
-        Node node = traversalNode.getChild(move);
+        MCNode node = traversalNode.getChild(move);
 
         if (node == null) {
             return false;
@@ -93,7 +80,7 @@ public class GameTree {
     public boolean traverse(Position[][] moves) {
 
         for (Position[] move : moves) {
-            Node node = traversalNode.getChild(move);
+            MCNode node = traversalNode.getChild(move);
 
             if (node == null) {
                 return false;
@@ -106,6 +93,16 @@ public class GameTree {
         return true;
     }
 
+    //MCTS Methods ----------------------------------------------------------------------------------------
+    
+    /**
+     * Given the current tree, select a leaf node to expand
+     * Choose successive child nodes by applying the UCT formula at each step
+     */
+    private void selection() {
+
+    }
+
     //Miscellaneous Methods -------------------------------------------------------------------------------
 
     /**
@@ -113,7 +110,7 @@ public class GameTree {
      * @param newRoot specifies a node of the current tree to become the new root
      * All nodes not part of the subtree are discarded
      **/
-    public void pruneTree(Node newRoot) {
+    public void pruneTree(MCNode newRoot) {
         this.root = newRoot;
         this.rootPlayer = Colour.values()[(this.rootPlayer.ordinal() + 1) % 3];
     }
@@ -125,13 +122,14 @@ public class GameTree {
      * Denominator increased by 1 every time a MCTS runoff uses the move associated with this node
      * Note that ALL ply (reprsented by Position[2]) are assumed to be valid and legal on the corresponding board 
      **/
-    private class MCNode implements Node {
+    private class MCNode {
 
-        private Node parent = null;
+        private MCNode parent = null;
         private Position[] parentMove = new Position[2]; //move taken to traverse from the parent node to this node, assumed to be legal
-        private ArrayList<Node> children = new ArrayList<Node>();
+        private ArrayList<MCNode> children = new ArrayList<MCNode>();
         private double numerator;
         private double denominator;
+        private double uctResult; //Store the UCT formula result here and update it as needed
 
         /**
          * Parent-present constructor
@@ -148,12 +146,13 @@ public class GameTree {
 
         //Getters and setters -------------------------------------------------------------------------------
 
-        public Node getParent() {return this.parent;}
+        public MCNode getParent() {return this.parent;}
         public Position[] getMove() {return this.parentMove;}
-        public ArrayList<Node> getChildren() {return this.children;}
+        public ArrayList<MCNode> getChildren() {return this.children;}
         public double getNumerator() {return this.numerator;}
         public double getDenominator() {return this.denominator;}
         public double getFraction() {return this.numerator / this.denominator;}
+        public double getUCT() {return this.uctResult;}
 
         /**
          * Return the child node that corresponds to the threechess position that would arise after the ply described by
@@ -162,9 +161,9 @@ public class GameTree {
          * @param createIfNone if true, create a child node if the search yields nothing
          * @return the corresponding child node, null if the ply hasn't yet been expanded
          */
-        public Node getChild(Position[] move, boolean createIfNone) {
+        public MCNode getChild(Position[] move, boolean createIfNone) {
 
-            for (Node child : this.children) {
+            for (MCNode child : this.children) {
                 if (Arrays.equals(child.getMove(), move)) {
                     return child;
                 }
@@ -189,9 +188,9 @@ public class GameTree {
          * @param move the ply to use to select the child
          * @return the corresponding child node, null if the ply hasn't yet been expanded
          */
-        public Node getChild(Position[] move) {
+        public MCNode getChild(Position[] move) {
 
-            for (Node child : this.children) {
+            for (MCNode child : this.children) {
                 if (Arrays.equals(child.getMove(), move)) {
                     return child;
                 }
@@ -212,14 +211,23 @@ public class GameTree {
          * Updater for MC runoffs
          * @param result enumerates the result of the relevant runoff (1 = win, 0.5 = draw, 0 = loss)
          **/
-        public void runoffUpdate(double result) {this.denominator++; this.numerator += result;}
+        public void runoffUpdate(double result) {
+            this.denominator++;
+            this.numerator += result;
+            this.updateUCTFormula();
+
+            for (MCNode c : this.children) {
+                c.updateUCTFormula();
+            }
+        
+        }
 
         /**
          * Sets the parent node for this node
          * @param parent the new parent node
          * @throws IllegalArgumentException if parent is null
          */
-        public void setParent(Node parent) {
+        public void setParent(MCNode parent) {
             if (parent == null) throw new IllegalArgumentException("bad node sent to setParent, cannot be null");
             this.parent = parent;
         }
@@ -234,7 +242,7 @@ public class GameTree {
          * @param child the node to be added
          * @throws IllegalArgumentException if child is null 
          **/
-        public void addChild(Node child) {
+        public void addChild(MCNode child) {
             if (child == null) throw new IllegalArgumentException("bad node sent to addChild, cannot be null");
             this.children.add(child);
             child.setParent(this);
@@ -247,6 +255,15 @@ public class GameTree {
         public void addChild(Position[] move) {
             MCNode child = new MCNode(this, move);
             this.children.add(child);
+        }
+
+        /**
+         * Calculates the UCT forumla for a given node
+         * @param node node to use in calculations
+         * @return the result of the formula
+         */
+        public void updateUCTFormula() {
+            this.uctResult = this.getFraction() + Math.sqrt(2*Math.log(this.parent.getDenominator()) / this.denominator);
         }
 
 

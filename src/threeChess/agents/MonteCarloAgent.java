@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 public class MonteCarloAgent extends Agent {
 
     private static final String name = "Carlos the Monty";
+    private boolean initialised; //Remember if we've initialised everything
     private Board workingBoard; //board to modify while traversing the game tree to validate moves
     private HashMap<Piece, Position> pieceLocations; //Store piece locations in the position we are given to move from
     private HashMap<Piece, Position> workingPieceLocations; //Store piece locations to enable fast lookups for move selection
@@ -16,14 +17,13 @@ public class MonteCarloAgent extends Agent {
 
     public Position[] playMove(Board board) {
 
+        this.initialiseAgent(board);
+
         return null;
     }
 
 
     // MCTS Methods ----------------------------------------------------------------------------
-    private void selection() {
-
-    }
 
     private void expansion() {
         
@@ -37,9 +37,17 @@ public class MonteCarloAgent extends Agent {
         
     }
 
+
+
     //GameTree methods --------------------------------------------------------------------------------------------
 
-    
+    /**
+     * Initialises the game tree
+     * @param board the game state to use to init the tree
+     **/
+    private void initGameTree(Board board) {
+
+    }
 
     //Board, piece and move methods -------------------------------------------------------------------------------
 
@@ -100,6 +108,23 @@ public class MonteCarloAgent extends Agent {
 
 
     // Miscellaneous Methods -------------------------------------------------------------------
+
+    /**
+     * Performs one-time initialisation to get everything ready for play
+     * @param board the initial board to use for initialisation
+     */
+    private void initialiseAgent(Board board) {
+        if (initialised) return;
+
+        this.gameTree = new GameTree(board.getTurn());
+        this.initPieceLocations(board);
+        this.resetWorkingPieceLocations();
+
+
+        this.initialised = true;
+
+    }
+
 
     /**
      * @return the Agent's name, for annotating game description.
