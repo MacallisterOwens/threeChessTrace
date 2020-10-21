@@ -29,10 +29,6 @@ class StateAction implements Serializable {
 /**
  * @todo: Implement amInCheck, canPutOtherInCheck, update reward function to
  *        also check for center board control, piece mobility, and king saftey
- * 
- *        Q-Learning Transition Rule: Qnew(state_t, action_t) = Qold(state_t,
- *        action_t) + learningRate * (reward_t + maxQ(next_state,
- *        every_possible_action_in_next_state) - Qold(state_t, action_t))
  **/
 public class QLearningAgent extends Agent {
 
@@ -778,12 +774,52 @@ public class QLearningAgent extends Agent {
     private boolean canPutOtherInCheck() {
 
     }
+    
+    private double getPiecePositionValue(Board boardState) {
+        HashSet<Position> positions = (HashSet<Position>) boardState.getPositions(myColour);
+        double val = 0.0;
+
+        for (Position pos : positions) {
+            switch (boardState.getPiece(pos).getType()) {
+                case PAWN:
+                    val += pawnPV.get(pos);
+                    break;
+                
+                case KNIGHT:
+                    val += knightPV.get(pos);
+                    break;
+
+                case BISHOP:
+                    val += bishopPV.get(pos);
+                    break;
+
+                case ROOK:
+                    val += rookPV.get(pos);
+                    break;
+
+                case QUEEN:
+                    val += queenPV.get(pos);
+                    break;
+
+                case KING:
+                    val += kingPV.get(pos);
+                    break;
+            
+                default:
+                    break;
+            }
+        }
+
+        return val;
+    }
 
     private double calculateCurrentReward() {
         double curRewardValue = curBoardState.score(curBoardState.getTurn());
+        curRewardValue += getPiecePositionValue(curBoardState);
 
         if (prevRewardValue == 0) {
             prevRewardValue = prevBoardState.score(prevBoardState.getTurn());
+            prevRewardValue += getPiecePositionValue(prevBoardState);
         }
 
         double soln = curRewardValue - prevRewardValue;
@@ -845,7 +881,56 @@ public class QLearningAgent extends Agent {
             return null;
         }
 
-        return new Position[] { null, null };
+        Position[] maxAction = new Position[2];
+        double maxEstUtility = Double.MIN_VALUE;
+
+        HashMap<Position, HashSet<Position[]>> availMoves = getAllAvailableMoves(board);
+
+        if(shouldExplore()) { // If I should explore choose the state-action pair with the lowest visits, or if there is a state we haven't explored immediately choose that
+            int lowestVisitedSA = Integer.MAX_VALUE;
+            for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                HashSet<Position[]> pieceMoves = entry.getValue();
+                for (Position[] action : pieceMoves) {
+                    StateAction curExaminedSA = new StateAction(board, action);
+                    if (nTimesExecuted.containsKey(curExaminedSA)) { // If we have seen the state-action pair already check times executed
+                        if(nTimesExecuted.get(curExaminedSA) == 0) {
+                            // Proceed using this state-action
+                        } else if(nTimesExecuted.get(curExaminedSA) < lowestVisitedSA) {
+                            lowestVisitedSA = nTimesExecuted.get(curExaminedSA);
+                        }
+                    } else { // Add the new state-action pair to the q-table and set its value to 0
+                        qTable.put(curExaminedSA, 0.0);
+                        nTimesExecuted.put(curExaminedSA, 0);
+                        // Proceed using this state-action pair
+                    }
+                }
+            }
+        } else { // Just do it normally, be greedy and take the state-action pair that has the highest utility/value/reward
+            for (Map.Entry<Position, HashSet<Position[]>> entry : availMoves.entrySet()) {
+                HashSet<Position[]> pieceMoves = entry.getValue();
+                for (Position[] action : pieceMoves) {
+                    StateAction curExaminedSA = new StateAction(board, action);
+                    if (nTimesExecuted.containsKey(curExaminedSA)) { // If we have seen the state-action pair already set utility is its value
+                        if (qTable.get(curExaminedSA) > maxEstUtility) { // Double check when more awake
+                            maxEstUtility = qTable.get(curExaminedSA);
+                            maxAction = action;
+                        }
+                    } else { // Add the new state-action pair to the q-table and set its value to 0
+                        qTable.put(curExaminedSA, 0.0);
+                        nTimesExecuted.put(curExaminedSA, 0);
+                        if(0.0 > maxEstUtility) { // check when more awake
+                            maxEstUtility = 0.0;
+                            maxAction = action;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Do post process stuff i.e. update all prev values and such
+        // Write relevant stuff to storage
+
+        return maxAction;
     }
 
     /**
