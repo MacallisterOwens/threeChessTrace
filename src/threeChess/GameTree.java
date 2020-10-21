@@ -27,25 +27,33 @@ public class GameTree {
     }
 
     private Node root; //Root node 
+    private Colour rootPlayer; //Keeps track of whose ply it is in the root game state
     private Node traversalNode; //Keep track of location in tree when traversing
+    private int traversalDepth; //Keeps track of how many ply deep the current traversal is
 
     /**
      * Basic Constructor
      * @param root the node to use as the root for the tree
+     * @param player the current turn for the root game state
      **/
-    public GameTree(Node root) {
+    public GameTree(Node root, Colour player) {
         this.root = root;
         this.traversalNode = root;
+        this.traversalDepth = 0;
+        this.rootPlayer = player;
     }
 
     //Getters and setters -------------------------------------------------------------------------------
 
     public Node getRoot() {return this.root;}
     public Node getCurrentNode() {return this.traversalNode;}
+    public Colour getRootPlayer() {return this.rootPlayer;}
+    public int getTraversalDepth() {return this.traversalDepth;}
+    public Colour getTraversalPlayer() {return Colour.values()[(this.rootPlayer.ordinal() + this.traversalDepth) % 3];}
 
     // Traversal -------------------------------------------------------------------------------
 
-    public void resetTraversal() {this.traversalNode = this.root;}
+    public void resetTraversal() {this.traversalNode = this.root; this.traversalDepth = 0;}
 
     /**
      * Method to traverse the tree in a single move
@@ -59,6 +67,7 @@ public class GameTree {
             return false;
         } else {
             traversalNode = node;
+            this.traversalDepth++;
             return true;
         }
 
@@ -79,6 +88,7 @@ public class GameTree {
                 return false;
             } else {
                 traversalNode = node;
+                this.traversalDepth++;
             }
         }
 
