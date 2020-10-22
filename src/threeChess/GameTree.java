@@ -52,8 +52,9 @@ public class GameTree {
     // Traversal -------------------------------------------------------------------------------
 
     public void resetTraversal() {this.traversalNode = this.root; this.traversalDepth = 0;}
-    public boolean traversalIsLeaf() {return this.traversalNode.isLeaf();}
-    public boolean traversalIsUnvisited() {return this.traversalNode.getDenominator() == 0;}
+    public boolean traversalAtLeaf() {return this.traversalNode.isLeaf();}
+    public boolean traversalAtRoot() {return this.traversalNode == this.root;}
+    public boolean traversalAtUnvisited() {return this.traversalNode.getDenominator() == 0;}
 
     /**
      * Method to traverse the tree in a single move
@@ -93,6 +94,30 @@ public class GameTree {
         }
 
         return true;
+    }
+
+    /**
+     * Traverse back up the tree
+     * @param steps the number of steps to move back up
+     * @return true if the traversal succeeded, false otherwise
+     */
+    public boolean traverseBack(int steps) {
+        while (steps-- > 0) {
+            if (this.traversalAtRoot()) return false;
+            this.traversalNode = this.traversalNode.getParent();
+        }
+
+        return true;
+
+    }
+
+    /**
+     * Traverse back up the tree
+     * Method overloading, single step
+     * @return true if the traversal succeeded, false otherwise
+     */
+    public boolean traverseBack() {
+        return this.traverseBack(1);
     }
 
     /**
@@ -136,6 +161,41 @@ public class GameTree {
 
         return bestMove;
 
+    }
+
+    /**
+     * Method that takes the result of a rollout and updates the current traversal node
+     * @param winner the winner of the rollout
+     * @param loser the loser of the rollout
+     */
+    public void updateTraversal(Colour winner, Colour loser) {
+        Colour traversalPlayer = this.getTraversalPlayer();
+        if (traversalPlayer == winner) {
+            this.traversalNode.rolloutUpdate(1.0);
+        } else if (traversalPlayer == loser) {
+            this.traversalNode.rolloutUpdate(0.0);
+        } else {
+            this.traversalNode.rolloutUpdate(0.5);
+        }
+    }
+
+    /**
+     * Return the best current move 
+     * @return a child of the root node with the highest denominator
+     */
+    public Position[] selectMove() {
+
+        double mostVisits = 0;
+        Position[] bestMove = null;
+
+        for (MCNode c : this.root.getChildren()) {
+            if (c.getDenominator() > mostVisits) {
+                mostVisits = c.getDenominator();
+                bestMove = c.getMove();
+            }
+        }
+
+        return bestMove;
     }
 
     //Miscellaneous Methods -------------------------------------------------------------------------------

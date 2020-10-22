@@ -21,19 +21,45 @@ public class MonteCarloAgent extends Agent {
     private HashMap<Piece, Position> greenWorkingPieceLocations; 
     private GameTree gameTree;
 
+    //Manage time effectively
+    private static final long timeLimit = 1500000;
+
     //Helper variable to store features of any game instance
     private Colour playerColour;
     private Position kingHomePosition;
+
+    public MonteCarloAgent() {
+        this.initialised = false;
+    }
 
     public Position[] playMove(Board board) {
 
         this.initialiseAgent(board);
 
-        return null;
+        long startTime = System.nanoTime(); 
+
+        while (System.nanoTime() - startTime < timeLimit) {
+            MCTSRound(board);
+        }
+
+        return gameTree.selectMove();
     }
 
 
     // MCTS Methods ----------------------------------------------------------------------------
+
+    public void MCTSRound(Board board) {
+
+        //DEBUG 
+        this.initialiseAgent(board);
+
+        this.resetWorkingPieceLocations();
+        this.resetWorkingBoard(board);
+        this.selection();
+        this.gameTree.resetTraversal();
+
+    }
+
 
     /**
      * Choose a child node to expand to game completion
@@ -41,11 +67,11 @@ public class MonteCarloAgent extends Agent {
      * Every 0/0 node that is selected by this method has its children fully expanded as new 0/0 nodes
      * @throws RuntimeException if traversal fails at any point or the tree is inconsistent with workingboard
      */
-    private void selectAndExpand() {
+    private void selection() {
 
         //Traverse the tree until we reach a twig node
         Position[] nextMove;
-        while(this.gameTree.traversalIsUnvisited() == false) {
+        while(this.gameTree.traversalAtUnvisited() == false) {
             //get next child to traverse to
             nextMove = gameTree.uctSelectChild();
             //update workingBoard and piecePositions
@@ -60,26 +86,63 @@ public class MonteCarloAgent extends Agent {
         //the traversal node is now some 0/0 node
         //first we fully expand this node
 
-        //Get the player turn in the game state described by traversalNode
+        //Check that the node does not end the game decisively
+        if (this.workingBoard.gameOver()) {
+            //do some backpropogation here
+        } else {
+
+            this.expandNode();
+            //Done, traversalNode is now ready to have a rollout started from its game state.
+            this.rollout();
+        }
+    }
+
+    /**
+     * Expand the current traversalNode with all the possible moves that can be made
+     */
+    private void expandNode() {
+        //Get the player turn in the game state described by traversalNode/workingBoard
         Colour traversalPlayer = workingBoard.getTurn();
         if (traversalPlayer != gameTree.getTraversalPlayer()) throw new RuntimeException("tree is not consistent with workingboard");
-        //These moves should be correct
+        //These moves should be valid & legal
         HashSet<Position[]> availableMoves = this.getAllAvailableMoves(traversalPlayer);
 
         for (Position[] move : availableMoves) {
             if (!gameTree.expandTraversalNode(move)) System.out.println("DEBUG: Issue with traversal node expansion");
         }
-
-        //Done, traversalNode is now ready to have a rollout started from its game state.
-        this.rollout();
     }
 
+
+    /**
+     * Simulate a game from the 0/0 node selected
+     * The game state to begin from is described by workingBoard and traversalNode
+     */
     private void rollout() {
         //workingBoard holds the position from which we wish to initiate the rollout
+        //for the moment, just use a light rollout (random)
+
+        //Note that it is assumed the agent will return only valid moves
+        Agent randomAgent = new RandomAgent();
+
+        while (!workingBoard.gameOver()) {
+            Position[] move = randomAgent.playMove(workingBoard);
+            try {workingBoard.move(move[0], move[1]);}
+            catch (ImpossiblePositionException e) {System.out.println("DEBUG: rollout agent played illegal move");}
+        }
+
+        //DEBUGSystem.out.println(workingBoard.getWinner());
+        this.backPropogate(workingBoard.getWinner(), workingBoard.getLoser());
     }
 
-    private void backpropogate() {
-        
+    /**
+     * Update the tree based on the current rollout result
+     * @param winner the winner of the rollout
+     * @param loser the loser of the rollout
+     */
+    private void backPropogate(Colour winner, Colour loser) {
+        while (!gameTree.traversalAtRoot()) {
+            gameTree.updateTraversal(winner, loser);
+        }
     }
 
 
@@ -88,9 +151,10 @@ public class MonteCarloAgent extends Agent {
 
     /**
      * Initialises the game tree
-     * @param board the game state to use to init the tree
      **/
-    private void initGameTree(Board board) {
+    private void initGameTree() {
+        this.gameTree = new GameTree(this.playerColour);
+        this.expandNode();
 
     }
 
@@ -145,6 +209,15 @@ public class MonteCarloAgent extends Agent {
         //Now play move
         this.workingBoard.move(start, end);
 
+    }
+
+    /**
+     * Resets the working board
+     * @param board the board to reset workingBoard to
+     */
+    private void resetWorkingBoard(Board board) {
+        try {this.workingBoard = (Board) board.clone();}
+        catch (CloneNotSupportedException e) {System.out.println("DEBUG: working board reset failed");}
     }
 
     /**
@@ -297,11 +370,11 @@ public class MonteCarloAgent extends Agent {
         if (initialised) return;
 
         this.playerColour = board.getTurn();
-        this.gameTree = new GameTree(this.playerColour);
+        this.resetWorkingBoard(board);
         this.initPieceLocations(board);
         this.resetWorkingPieceLocations();
         this.kingHomePosition = this.getKingHome(this.playerColour);
-
+        this.initGameTree();
 
         this.initialised = true;
 
