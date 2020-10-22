@@ -54,7 +54,6 @@ public class GameTree {
     public void resetTraversal() {this.traversalNode = this.root; this.traversalDepth = 0;}
     public boolean traversalAtLeaf() {return this.traversalNode.isLeaf();}
     public boolean traversalAtRoot() {return this.traversalNode == this.root;}
-    public boolean traversalAtUnvisited() {return this.traversalNode.getDenominator() == 0;}
 
     /**
      * Method to traverse the tree in a single move
@@ -128,7 +127,7 @@ public class GameTree {
      */
     public boolean expandTraversalNode(Position[] move) {
         for (MCNode child : this.traversalNode.getChildren()) {
-            if (child.getMove() == move) {
+            if (child.getMove()[0] == move[0] && child.getMove()[1] == move[1]) {
                 return false;
             }
         }
@@ -147,7 +146,8 @@ public class GameTree {
      */
     public Position[] uctSelectChild() {
 
-        if (this.traversalNode.isLeaf()) throw new IllegalArgumentException("Traversal node is leaf, cannot get best UCT child");
+        if (this.traversalNode.isLeaf()) 
+        throw new IllegalArgumentException("Traversal node is leaf, cannot get best UCT child");
 
         double maxUCT = 0.0;
         Position[] bestMove = null;
@@ -194,21 +194,29 @@ public class GameTree {
                 bestMove = c.getMove();
             }
         }
-
+        
         return bestMove;
     }
 
-    //Miscellaneous Methods -------------------------------------------------------------------------------
-
     /**
-     * Method to replace the current tree with one of its subtrees
-     * @param newRoot specifies a node of the current tree to become the new root
-     * All nodes not part of the subtree are discarded
-     **/
-    public void pruneTree(MCNode newRoot) {
-        this.root = newRoot;
-        this.rootPlayer = Colour.values()[(this.rootPlayer.ordinal() + 1) % 3];
+     * Updates the tree to keep up with the two most recent ply made by opponents
+     * The new root will correspond to the current game state
+     * @param moves the two most recent ply, oldest first
+     */
+    public void mctsPrune(Position[][] moves) {
+
+        this.resetTraversal();
+
+        for (Position[] move : moves) {
+            this.traverse(move);
+        }
+
+        this.root = this.traversalNode;
+        this.resetTraversal();
+        this.root.setParent(null);
     }
+
+    //Miscellaneous Methods -------------------------------------------------------------------------------
 
     /**
      * Class to maintain win/draw/loss statistics for Monte Carlo Tree Search
@@ -249,6 +257,7 @@ public class GameTree {
         public double getDenominator() {return this.denominator;}
         public double getFraction() {return this.numerator / this.denominator;}
         public double getUCT() {return this.uctResult;}
+        public void setDenominator(double d) {this.denominator = d;}
 
         /**
          * Return the child node that corresponds to the threechess position that would arise after the ply described by
@@ -296,6 +305,15 @@ public class GameTree {
 
         }
 
+        
+        /**
+         * Sets the parent node for this node
+         * @param parent the new parent node
+         */
+        public void setParent(MCNode parent) {
+            this.parent = parent;
+        }
+
 
         //Info about this node -------------------------------------------------------------------------------
 
@@ -317,17 +335,6 @@ public class GameTree {
             }
         
         }
-
-        /**
-         * Sets the parent node for this node
-         * @param parent the new parent node
-         * @throws IllegalArgumentException if parent is null
-         */
-        public void setParent(MCNode parent) {
-            if (parent == null) throw new IllegalArgumentException("bad node sent to setParent, cannot be null");
-            this.parent = parent;
-        }
-
 
         //Miscellaneous Methods -------------------------------------------------------------------------------
 
@@ -359,7 +366,8 @@ public class GameTree {
          * @return the result of the formula
          */
         public void updateUCT() {
-            if (this.numerator == 0) this.uctResult = Double.MAX_VALUE;
+            if (this.denominator == 0) this.uctResult = 100000000;
+            else if (this.parent == null) return; //root node, does not need a UCT value
             else this.uctResult = this.getFraction() + Math.sqrt(2*Math.log(this.parent.getDenominator()) / this.denominator);
         }
 

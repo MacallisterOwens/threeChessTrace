@@ -22,11 +22,15 @@ public class MonteCarloAgent extends Agent {
     private GameTree gameTree;
 
     //Manage time effectively
-    private static final long timeLimit = 1500000;
+    private static final long timeLimit = 5_000_000_000L;
+    private int mcRounds = 0;
 
     //Helper variable to store features of any game instance
     private Colour playerColour;
     private Position kingHomePosition;
+
+    //Rollout agents
+    private static final Random random = new Random();
 
     public MonteCarloAgent() {
         this.initialised = false;
@@ -34,12 +38,16 @@ public class MonteCarloAgent extends Agent {
 
     public Position[] playMove(Board board) {
 
+        this.initPieceLocations(board);
+        this.mcRounds = 0;
         this.initialiseAgent(board);
+        this.gameStateUpdate(board);
 
         long startTime = System.nanoTime(); 
 
         while (System.nanoTime() - startTime < timeLimit) {
             MCTSRound(board);
+            System.out.println(++this.mcRounds + "MC rounds\r");
         }
 
         return gameTree.selectMove();
@@ -50,16 +58,12 @@ public class MonteCarloAgent extends Agent {
 
     public void MCTSRound(Board board) {
 
-        //DEBUG 
-        this.initialiseAgent(board);
-
         this.resetWorkingPieceLocations();
+        this.gameTree.resetTraversal();
         this.resetWorkingBoard(board);
         this.selection();
-        this.gameTree.resetTraversal();
 
     }
-
 
     /**
      * Choose a child node to expand to game completion
@@ -71,7 +75,8 @@ public class MonteCarloAgent extends Agent {
 
         //Traverse the tree until we reach a twig node
         Position[] nextMove;
-        while(this.gameTree.traversalAtUnvisited() == false) {
+        while(this.gameTree.traversalAtLeaf() == false) {
+
             //get next child to traverse to
             nextMove = gameTree.uctSelectChild();
             //update workingBoard and piecePositions
@@ -88,7 +93,7 @@ public class MonteCarloAgent extends Agent {
 
         //Check that the node does not end the game decisively
         if (this.workingBoard.gameOver()) {
-            //do some backpropogation here
+            this.backPropogate(workingBoard.getWinner(), workingBoard.getLoser());
         } else {
 
             this.expandNode();
@@ -102,13 +107,12 @@ public class MonteCarloAgent extends Agent {
      */
     private void expandNode() {
         //Get the player turn in the game state described by traversalNode/workingBoard
-        Colour traversalPlayer = workingBoard.getTurn();
-        if (traversalPlayer != gameTree.getTraversalPlayer()) throw new RuntimeException("tree is not consistent with workingboard");
+        Colour player = gameTree.getTraversalPlayer();
         //These moves should be valid & legal
-        HashSet<Position[]> availableMoves = this.getAllAvailableMoves(traversalPlayer);
+        HashSet<Position[]> availableMoves = this.getAllAvailableMoves(player);
 
         for (Position[] move : availableMoves) {
-            if (!gameTree.expandTraversalNode(move)) System.out.println("DEBUG: Issue with traversal node expansion");
+            gameTree.expandTraversalNode(move);
         }
     }
 
@@ -122,10 +126,10 @@ public class MonteCarloAgent extends Agent {
         //for the moment, just use a light rollout (random)
 
         //Note that it is assumed the agent will return only valid moves
-        Agent randomAgent = new RandomAgent();
+
 
         while (!workingBoard.gameOver()) {
-            Position[] move = randomAgent.playMove(workingBoard);
+            Position[] move = this.fastRandomRollout(workingBoard);
             try {workingBoard.move(move[0], move[1]);}
             catch (ImpossiblePositionException e) {System.out.println("DEBUG: rollout agent played illegal move");}
         }
@@ -140,8 +144,10 @@ public class MonteCarloAgent extends Agent {
      * @param loser the loser of the rollout
      */
     private void backPropogate(Colour winner, Colour loser) {
-        while (!gameTree.traversalAtRoot()) {
+        while (true) {
             gameTree.updateTraversal(winner, loser);
+            if (gameTree.traversalAtRoot()) break;
+            gameTree.traverseBack();
         }
     }
 
@@ -158,6 +164,18 @@ public class MonteCarloAgent extends Agent {
 
     }
 
+    /**
+     * Catches gameTree up after the opponents have moved
+     * @param moves the moves that have been played since our last move
+     */
+    private void updateGameTree(Position[][] moves) {
+            gameTree.mctsPrune(moves);
+            if (gameTree.traversalAtLeaf()) {
+                this.expandNode();
+            }
+
+    }
+
     //Board, piece and move methods -------------------------------------------------------------------------------
 
     private boolean validateMove(Position[] move) {return this.workingBoard.isLegalMove(move[0], move[1]);}
@@ -171,7 +189,9 @@ public class MonteCarloAgent extends Agent {
     private void workingBoardMove(Position[] move) throws ImpossiblePositionException {
 
         //Check if move is legal
-        if (this.validateMove(move) == false) throw new IllegalArgumentException("Illegal move sent to workingBoardMove");
+        if (this.validateMove(move) == false) {
+            throw new IllegalArgumentException("Illegal move sent to workingBoardMove");
+        }
 
         Position start = move[0];
         Position end = move[1];
@@ -204,6 +224,9 @@ public class MonteCarloAgent extends Agent {
         } if (mover.getType() == PieceType.PAWN && end.getRow() == 0) {
             playerPieceLocations.remove(mover);
             playerPieceLocations.put(new Piece(PieceType.QUEEN, playerColour), end);
+        } else {
+            //Normal move
+            playerPieceLocations.put(mover, end);
         }
 
         //Now play move
@@ -252,28 +275,6 @@ public class MonteCarloAgent extends Agent {
 
 
     /**
-     * Method to get the most recent moves played by the opponents
-     * In most scenarios, this will result in the two moves played inbetween turns
-     * However, at the start of games, there may be only 0-1 moves played before our turn
-     * @param board the game state from which to take the previous moves
-     * @return an array containing the previous moves. Empty if no moves were played before the current turn
-     */
-    private Position[][] getPreviousMoves(Board board) {
-
-        int num_moves = board.getMoveCount();
-
-        switch (num_moves) {
-            case 0:
-                return new Position[0][0];
-            case 1:
-                return new Position[][] {board.getMove(0)};
-            default:
-                //Convert num_moves to an index, then get the two most recent entries
-                return new Position[][] {board.getMove((num_moves - 1) - 1), board.getMove(num_moves - 1)};
-        }
-    }
-
-    /**
      * Returns a set of all availble moves for a given piece based on the working board
      * Moves are represented with the standard {start, end} position array
      * @param position representation of where the given piece is located on the board
@@ -283,6 +284,9 @@ public class MonteCarloAgent extends Agent {
     private HashSet<Position[]> getAvailableMoves(Position position) {
 
     Piece mover = this.workingBoard.getPiece(position);
+    if (mover == null) {
+        mover = null;
+    }
     PieceType moverType = mover.getType();
 
     HashSet<Position[]> possibleMoves= new HashSet<Position[]>();
@@ -371,13 +375,33 @@ public class MonteCarloAgent extends Agent {
 
         this.playerColour = board.getTurn();
         this.resetWorkingBoard(board);
-        this.initPieceLocations(board);
         this.resetWorkingPieceLocations();
         this.kingHomePosition = this.getKingHome(this.playerColour);
         this.initGameTree();
 
         this.initialised = true;
 
+    }
+
+    /**
+     * Method to update our representations of the game state after the opponents ply(s)
+     * @param board the current game state, some number of ply ahead of our last move
+     */
+    private void gameStateUpdate(Board board) {
+
+        this.resetWorkingBoard(board);
+        this.initPieceLocations(board);
+        this.resetWorkingPieceLocations();
+
+        int m = board.getMoveCount();
+        if (m < 3) {
+            //We have not played a move previously, and so have nothing to update
+        } else {
+            //Get the three most recent moves to prune gameTree
+            Position[][] moves = new Position[][] {board.getMove(m - 3), board.getMove(m-2), board.getMove(m-1)};
+            this.updateGameTree(moves);
+        }
+        //and update the piece locations
     }
 
 
@@ -393,5 +417,35 @@ public class MonteCarloAgent extends Agent {
      * @param finalBoard the end position of the board
      * **/
     public void finalBoard(Board finalBoard){}
+
+    //Rollout Agents
+
+    public Position[] fastRandomRollout(Board board) {
+        //Position[] pieces = this.getPlayerPieceLocations(board.getTurn()).values().toArray(new Position[0]);
+        Position[] pieces = board.getPositions(board.getTurn()).toArray(new Position[0]);
+        Position start = pieces[0];
+        Position end = pieces[0]; //dummy illegal move
+
+        while (!board.isLegalMove(start, end)) {
+            start = pieces[random.nextInt(pieces.length)];
+            Piece mover = board.getPiece(start);
+            if (mover == null) {
+                mover = null;
+            }
+            Direction[][] steps = mover.getType().getSteps();
+            Direction[] step = steps[random.nextInt(steps.length)];
+            int reps = 1 + random.nextInt(mover.getType().getStepReps());
+            end = start;
+            try {
+            for (int i = 0; i<reps; i++)
+                end = board.step(mover, step, end, start.getColour()!=end.getColour());
+            } catch(ImpossiblePositionException e){}
+        }
+
+        return new Position[] {start,end};
+
+    }
+    
+    
 
 }
