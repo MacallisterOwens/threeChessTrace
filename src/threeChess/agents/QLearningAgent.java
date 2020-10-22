@@ -103,7 +103,7 @@ public class QLearningAgent extends Agent {
 
         qTable = new HashMap<StateAction, Double>();
         nTimesExecuted = new HashMap<StateAction, Integer>();
-        
+
         epsilon = epsilonVal;
     }
 
@@ -1266,9 +1266,9 @@ public class QLearningAgent extends Agent {
                 StateAction curExaminedSA = new StateAction(board, action);
                 if (nTimesExecuted.containsKey(curExaminedSA)) { // We have seen the state-action pair already
                     if (nTimesExecuted.get(curExaminedSA) == 0) { // Proceed using this state-action
-                        System.out.printf("The action pair trying to be passed to  `executeAction`: ");
+                        /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
                         System.out.printf("%s -> ", action[0].toString());
-                        System.out.printf("%s\r\n", action[1].toString());
+                        System.out.printf("%s\r\n", action[1].toString()); */
                         executeAction(action);
                         /* storeData(); */
                         return action.clone();
@@ -1280,17 +1280,17 @@ public class QLearningAgent extends Agent {
                     qTable.put(curExaminedSA, 0.0);
                     nTimesExecuted.put(curExaminedSA, 0);
                     // Proceed using this state-action pair
-                    System.out.printf("The action pair trying to be passed to  `executeAction`: ");
+                    /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
                     System.out.printf("%s -> ", action[0].toString());
-                    System.out.printf("%s\r\n", action[1].toString());
+                    System.out.printf("%s\r\n", action[1].toString()); */
                     executeAction(action);
                     /* storeData(); */
                     return action.clone();
                 }
             }
-            System.out.printf("The action pair trying to be passed to  `executeAction`: ");
+            /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
             System.out.printf("%s -> ", chosenAction[0].toString());
-            System.out.printf("%s\r\n", chosenAction[1].toString());
+            System.out.printf("%s\r\n", chosenAction[1].toString()); */
             executeAction(chosenAction);
             /* storeData(); */
             return chosenAction.clone();
@@ -1324,9 +1324,9 @@ public class QLearningAgent extends Agent {
                         }
                     }
                 }
-            System.out.printf("The action pair trying to be passed to  `executeAction`: ");
+            /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
             System.out.printf("%s -> ", chosenAction[0].toString());
-            System.out.printf("%s\r\n", chosenAction[1].toString());
+            System.out.printf("%s\r\n", chosenAction[1].toString()); */
             executeAction(chosenAction);
             /* storeData(); */
             return chosenAction.clone();

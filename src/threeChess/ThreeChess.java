@@ -170,6 +170,7 @@ public class ThreeChess{
         catch(ImpossiblePositionException e){logger.println(e.getMessage());}
       }
       else{//Illegal move results in immediate loss, -2 penalty, and a win awarded to the other two players.
+        System.out.printf("move is illegal. Move: %s %s\r\n\r\n", move[0].toString(), move[1].toString());
         int[] ret = {1,1,1};
         ret[board.getTurn().ordinal()] = -2;
         return ret;
@@ -237,7 +238,8 @@ public class ThreeChess{
    * Run program with parameter "manual" for a game with moves added in the command line, "cheat" to ignore all rules, and no parameters to run a tournament between agents listed in bots.
    **/
   public static void main(String[] args){
-    Agent[] bots = {new RandomAgent(), new RandomAgent(), new RandomAgent()};
+    Agent[] bots = {new QLearningAgent(0.15), new QLearningAgent(0.15), new QLearningAgent(0.15)};
+    /* Agent[] bots = {new QLearningAgent(), new RandomAgent(), new RandomAgent()}; */
     if(args.length > 0 && args[0].equals("manual")){
       bots = new Agent[] {new ManualAgent("A"), new ManualAgent("B"), new ManualAgent("C")};
       tournament(bots,60,0,true, null);
@@ -248,7 +250,21 @@ public class ThreeChess{
     }
     else if (args.length > 0 && args[0].equals("cheat")){
       playCheat();
+    } else {
+      double epsilon = 0.15;
+        /* tournament(bots,0,0,true,null); */
+        /* tournament(bots,0,0,true,null); */
+        /* bots[0].finalBoard(null); */
+      /* tournament(bots, 0, 0, true, null); */
+      for(int i = 0; i < 400; i++) {
+        tournament(bots, 0, 0, false, null);
+        for (Agent bot : bots) {
+          bot.finalBoard(null);
+        }
+        bots[0] = new QLearningAgent(epsilon);
+        bots[1] = new QLearningAgent(epsilon);
+        bots[2] = new QLearningAgent(epsilon);
+      }
     }
-    else tournament(bots,300,0,true,null);
   }
 }
