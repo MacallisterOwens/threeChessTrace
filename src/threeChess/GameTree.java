@@ -53,6 +53,7 @@ public class GameTree {
 
     public void resetTraversal() {this.traversalNode = this.root; this.traversalDepth = 0;}
     public boolean traversalIsLeaf() {return this.traversalNode.isLeaf();}
+    public boolean traversalIsUnvisited() {return this.traversalNode.getDenominator() == 0;}
 
     /**
      * Method to traverse the tree in a single move
@@ -98,7 +99,7 @@ public class GameTree {
      * Add a new child node to the current traversal node
      * @param move the ply leading to the game state of the new child, assumed to be valid + legal
      * If the node already exists then the expansion will fail  
-     * @return true if the expansion succeeded, flase otherwise
+     * @return true if the expansion succeeded, false otherwise
      */
     public boolean expandTraversalNode(Position[] move) {
         for (MCNode child : this.traversalNode.getChildren()) {

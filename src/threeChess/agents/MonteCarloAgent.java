@@ -21,6 +21,10 @@ public class MonteCarloAgent extends Agent {
     private HashMap<Piece, Position> greenWorkingPieceLocations; 
     private GameTree gameTree;
 
+    //Helper variable to store features of any game instance
+    private Colour playerColour;
+    private Position kingHomePosition;
+
     public Position[] playMove(Board board) {
 
         this.initialiseAgent(board);
@@ -33,30 +37,45 @@ public class MonteCarloAgent extends Agent {
 
     /**
      * Choose a child node to expand to game completion
+     * We wish to find a 0/0 node to begin a new rollout through
+     * Every 0/0 node that is selected by this method has its children fully expanded as new 0/0 nodes
+     * @throws RuntimeException if traversal fails at any point or the tree is inconsistent with workingboard
      */
-    private void selection() {
+    private void selectAndExpand() {
 
         //Traverse the tree until we reach a twig node
         Position[] nextMove;
-        while(true) {
-
-            //A 'twig' node is any one that has not yet been fully expanded
-            //Check that here
-
+        while(this.gameTree.traversalIsUnvisited() == false) {
+            //get next child to traverse to
             nextMove = gameTree.uctSelectChild();
-            this.gameTree.traverse(nextMove);
+            //update workingBoard and piecePositions
+            try {
+                this.workingBoardMove(nextMove);
+            } catch (ImpossiblePositionException e) {throw new RuntimeException("traversal has failed, tree has been corrupted");}
+            if (this.gameTree.traverse(nextMove) == false) {
+                throw new RuntimeException("traversal has failed, tree has been corrupted");
+            };
         }
-    }
 
-    /**
-     * Create a new child node for the current traversal node
-     */
-    private void expansion() {
-        
+        //the traversal node is now some 0/0 node
+        //first we fully expand this node
+
+        //Get the player turn in the game state described by traversalNode
+        Colour traversalPlayer = workingBoard.getTurn();
+        if (traversalPlayer != gameTree.getTraversalPlayer()) throw new RuntimeException("tree is not consistent with workingboard");
+        //These moves should be correct
+        HashSet<Position[]> availableMoves = this.getAllAvailableMoves(traversalPlayer);
+
+        for (Position[] move : availableMoves) {
+            if (!gameTree.expandTraversalNode(move)) System.out.println("DEBUG: Issue with traversal node expansion");
+        }
+
+        //Done, traversalNode is now ready to have a rollout started from its game state.
+        this.rollout();
     }
 
     private void rollout() {
-        
+        //workingBoard holds the position from which we wish to initiate the rollout
     }
 
     private void backpropogate() {
@@ -79,15 +98,53 @@ public class MonteCarloAgent extends Agent {
 
     private boolean validateMove(Position[] move) {return this.workingBoard.isLegalMove(move[0], move[1]);}
 
+
     /**
-     * Method to update the piece location hashmap after a change to the workingBoard
-     * Uses the current workingBoard implementation to inform the changes
-     * @param moves the moves taken since the last update, 
+     * Method to make moves on the working board during selection
+     * Also updates workingPiecePositions as it goes
+     * @throws IllegalArgumentException if the move is not legal/valid
      */
-    private void updateWorkingPieceLocations(Position[][] moves) {
-        for (Position[] move : moves) {
-            
+    private void workingBoardMove(Position[] move) throws ImpossiblePositionException {
+
+        //Check if move is legal
+        if (this.validateMove(move) == false) throw new IllegalArgumentException("Illegal move sent to workingBoardMove");
+
+        Position start = move[0];
+        Position end = move[1];
+        Piece mover = workingBoard.getPiece(start);
+        Colour movePlayer = mover.getColour();
+        HashMap<Piece, Position> playerPieceLocations = this.getPlayerPieceLocations(movePlayer);
+
+        //Update the relevant workingPieceLocations hashmap
+        //There are a number of conditions to check
+
+        //First: check for castling
+        //Borrows code form Board.java to perform the check
+        if(mover.getType()==PieceType.KING && start == this.kingHomePosition){
+            playerPieceLocations.put(mover, end);
+            if(end.getColumn()==2) {//castle left
+                Position rookPos = Position.get(movePlayer, 0, 0);
+                Piece rook = workingBoard.getPiece(rookPos);
+                playerPieceLocations.put(rook, Position.get(movePlayer, 0 ,3));
+            } else if(end.getColumn()==6) {//castle right
+                Position rookPos = Position.get(movePlayer, 0, 7);
+                Piece rook = workingBoard.getPiece(rookPos);
+                playerPieceLocations.put(rook, Position.get(movePlayer, 0, 5));
+            }
+        //Second: check if the move results in a capture
+        } else if (workingBoard.getPiece(end) != null) {
+            Piece captured = workingBoard.getPiece(end);
+            this.getPlayerPieceLocations(captured.getColour()).remove(captured);
+            playerPieceLocations.put(mover, end);
+        //Finally: check for a promotion
+        } if (mover.getType() == PieceType.PAWN && end.getRow() == 0) {
+            playerPieceLocations.remove(mover);
+            playerPieceLocations.put(new Piece(PieceType.QUEEN, playerColour), end);
         }
+
+        //Now play move
+        this.workingBoard.move(start, end);
+
     }
 
     /**
@@ -183,19 +240,7 @@ public class MonteCarloAgent extends Agent {
     private HashSet<Position[]> getAllAvailableMoves(Colour player) {
 
         HashSet<Position[]> allMoves = new HashSet<Position[]>();
-        HashMap<Piece, Position> pieceLocations = new HashMap<Piece, Position>();
-
-        switch (player) {
-            case RED:
-                pieceLocations = this.redWorkingPieceLocations;
-                break;
-            case BLUE:
-                pieceLocations = this.blueWorkingPieceLocations;
-                break;
-            case GREEN:
-                pieceLocations = this.greenWorkingPieceLocations;
-                break;    
-        }
+        HashMap<Piece, Position> pieceLocations = this.getPlayerPieceLocations(player);
 
         for (Position p : pieceLocations.values()) {
             allMoves.addAll(this.getAvailableMoves(p));
@@ -205,6 +250,42 @@ public class MonteCarloAgent extends Agent {
 
     }
 
+    /**
+     * Method to cleanly get a players workingPieceLocations from my clumsy representation
+     * @param player the player in questions
+     * @return the hashmap of their piece positions
+     */
+    private HashMap<Piece, Position> getPlayerPieceLocations(Colour player) {
+        switch (player) {
+            case RED:
+                return this.redWorkingPieceLocations;
+            case BLUE:
+                return this.blueWorkingPieceLocations;
+            case GREEN:
+                return this.greenWorkingPieceLocations;      
+        }
+        //to make the compiler happy
+        return null;
+    }
+
+    /**
+     * Method that returns the kings home square for a given colour 
+     * Helps check for castling moves in workingBoardMove
+     * @param player specifies the side of the board
+     * @return the king home position for that side
+     */
+    private Position getKingHome(Colour colour) {
+        switch (colour) {
+            case RED:
+                return Position.RE1;
+            case BLUE:
+                return Position.BE1;
+            case GREEN:
+                return Position.GE1;
+        }
+        //to make the compiler happy
+        return null;
+    }
 
     // Miscellaneous Methods -------------------------------------------------------------------
 
@@ -215,9 +296,11 @@ public class MonteCarloAgent extends Agent {
     private void initialiseAgent(Board board) {
         if (initialised) return;
 
-        this.gameTree = new GameTree(board.getTurn());
+        this.playerColour = board.getTurn();
+        this.gameTree = new GameTree(this.playerColour);
         this.initPieceLocations(board);
         this.resetWorkingPieceLocations();
+        this.kingHomePosition = this.getKingHome(this.playerColour);
 
 
         this.initialised = true;
