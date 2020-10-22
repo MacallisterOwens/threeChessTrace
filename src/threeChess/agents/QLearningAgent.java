@@ -83,7 +83,7 @@ public class QLearningAgent extends Agent {
     /**
      * A no argument constructor, required for tournament management.
      **/
-    public QLearningAgent() {
+    public QLearningAgent(double epsilonVal) {
         myLastAction = new Position[] { null, null };
         prevBoardState = null;
         curBoardState = null;
@@ -103,6 +103,8 @@ public class QLearningAgent extends Agent {
 
         qTable = new HashMap<StateAction, Double>();
         nTimesExecuted = new HashMap<StateAction, Integer>();
+        
+        epsilon = epsilonVal;
     }
 
     
@@ -118,6 +120,28 @@ public class QLearningAgent extends Agent {
      * value population.
      **/
     private void init() {
+        /* myLastAction = new Position[] { null, null };
+        prevBoardState = null;
+        curBoardState = null;
+        prevReward = 0.0;
+        curReward = 0.0;
+        prevRewardValue = 0.0;
+        hasMoved = true;
+        turnsPlayed = 0;
+
+        pawnPV = new HashMap<Position, Double>();
+        knightPV = new HashMap<Position, Double>();
+        bishopPV = new HashMap<Position, Double>();
+        rookPV = new HashMap<Position, Double>();
+        queenPV = new HashMap<Position, Double>();
+        kingPV = new HashMap<Position, Double>();
+
+        qTable = new HashMap<StateAction, Double>();
+        nTimesExecuted = new HashMap<StateAction, Integer>();
+
+        epsilon = 1.0; */
+
+
         switch (myColour) {
             case BLUE:
                 try {
@@ -772,10 +796,10 @@ public class QLearningAgent extends Agent {
      */
     private boolean shouldExplore() {
         if (random.nextDouble() < epsilon) {
-            epsilon *= 0.95;
+            /* epsilon *= 0.95; */
             return true;
         } else {
-            epsilon *= 0.95;
+            /* epsilon *= 0.95; */
             return false;
         }
     }
@@ -799,14 +823,22 @@ public class QLearningAgent extends Agent {
             StateAction curExaminedSA = new StateAction(boardState, action);
             if (nTimesExecuted.containsKey(curExaminedSA)) { // If we have seen the state-action pair already use
                                                              // its existing q-value
-                if (qTable.get(curExaminedSA) > maxEstUtility) {
-                    maxEstUtility = qTable.get(curExaminedSA);
+                if(qTable.get(curExaminedSA) != 0.0) {
+                    if (qTable.get(curExaminedSA) > maxEstUtility) {
+                        maxEstUtility = qTable.get(curExaminedSA);
+                    }
+                } else {
+                    double estimatedUtil = estimateUtil(boardState, prevRewardValue, action); 
+                    if(estimatedUtil > maxEstUtility){
+                        maxEstUtility = estimatedUtil;
+                    }   
                 }
             } else { // Add the new state-action pair to the q-table and set its value to 0
                 qTable.put(curExaminedSA, 0.0);
                 nTimesExecuted.put(curExaminedSA, 0);
-                if (qTable.get(curExaminedSA) > maxEstUtility) {
-                    maxEstUtility = 0.0;
+                double estimatedUtil = estimateUtil(boardState, prevRewardValue, action); 
+                if(estimatedUtil > maxEstUtility){
+                    maxEstUtility = estimatedUtil;
                 }
             }
         }
@@ -864,7 +896,7 @@ public class QLearningAgent extends Agent {
                 availMoves = getAllAvailableMoves(boardState, Colour.GREEN);
                 for (Position[] action : availMoves) {
                     if (action[1].equals(kingPos)) {
-                        soln -= 100.0;
+                        soln -= Double.MIN_VALUE;
                     }
                 }
                 availMoves = getAllAvailableMoves(boardState, Colour.RED);
@@ -879,7 +911,7 @@ public class QLearningAgent extends Agent {
                 availMoves = getAllAvailableMoves(boardState, Colour.RED);
                 for (Position[] action : availMoves) {
                     if (action[1].equals(kingPos)) {
-                        soln -= 100.0;
+                        soln -= Double.MIN_VALUE;
                     }
                 }
                 availMoves = getAllAvailableMoves(boardState, Colour.BLUE);
@@ -894,7 +926,7 @@ public class QLearningAgent extends Agent {
                 availMoves = getAllAvailableMoves(boardState, Colour.BLUE);
                 for (Position[] action : availMoves) {
                     if (action[1].equals(kingPos)) {
-                        soln -= 100.0;
+                        soln -= Double.MIN_VALUE;
                     }
                 }
                 availMoves = getAllAvailableMoves(boardState, Colour.GREEN);
@@ -957,8 +989,66 @@ public class QLearningAgent extends Agent {
         return val;
     }
 
+    private Position[] canWinGame(Board board) {
+        HashSet<Position[]> availMoves = new HashSet<>();
+        switch (myColour) {
+            case BLUE:
+                availMoves = getAllAvailableMoves(board, Colour.BLUE);
+                Position greenKingPos = null;
+                for (Position pos : board.getPositions(Colour.GREEN)) {
+                    if (board.getPiece(pos).getType() == PieceType.KING) {
+                        greenKingPos = pos;
+                        break;
+                    }
+                }
+                for(Position[] pos : availMoves) {
+                    if(pos[1].equals(greenKingPos)) {
+                        return pos;
+                    }
+                }
+                break;
+
+            case GREEN:
+                availMoves = getAllAvailableMoves(board, Colour.GREEN);
+                Position redKingPos = null;
+                for (Position pos : board.getPositions(Colour.RED)) {
+                    if (board.getPiece(pos).getType() == PieceType.KING) {
+                        redKingPos = pos;
+                        break;
+                    }
+                }
+                for(Position[] pos : availMoves) {
+                    if(pos[1].equals(redKingPos)) {
+                        return pos;
+                    }
+                }
+                break;
+
+            case RED:
+                availMoves = getAllAvailableMoves(board, Colour.RED);
+                Position blueKingPos = null;
+                for (Position pos : board.getPositions(Colour.BLUE)) {
+                    if (board.getPiece(pos).getType() == PieceType.KING) {
+                        blueKingPos = pos;
+                        break;
+                    }
+                }
+                for(Position[] pos : availMoves) {
+                    if(pos[1].equals(blueKingPos)) {
+                        return pos;
+                    }
+                }
+                break;
+        
+            default:
+                break;
+        }
+        return null;
+    }
+
     private double calculateCurrentReward() {
-        double curRewardValue = curBoardState.score(myColour) + getPiecePositionValue(curBoardState) + amUnderCheck(curBoardState);
+        double curRewardValue = ( 1.105 * curBoardState.score(myColour)) + (0.95 * getPiecePositionValue(curBoardState)) + amUnderCheck(curBoardState);
+        curRewardValue += (canWinGame(curBoardState) != null) ? Double.MAX_VALUE : 0;
         double soln = curRewardValue - prevRewardValue;
         prevRewardValue = curRewardValue;
         return soln;
@@ -978,12 +1068,32 @@ public class QLearningAgent extends Agent {
         prevReward = curReward;
     }
 
+    private double estimateUtil(Board board, double prevRewardVal, Position[] action) {
+        Board mBoard = null;
+        try {
+            mBoard = (Board) board.clone(); 
+        } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+            System.out.println("Could not clone board");
+        }
+        try {
+            mBoard.move(action[0], action[1]);
+        } catch (Exception e) {
+            
+        }
+        double estUtil = -prevRewardVal;
+        estUtil += (canWinGame(mBoard) != null) ? Double.MAX_VALUE : 0;
+        estUtil += (1.105 * mBoard.score(myColour)) + (0.95 * getPiecePositionValue(mBoard)) + amUnderCheck(mBoard);
+        return estUtil;
+    }
+
     private double quickUtilEstimate(Board board, Position[] action) {
         double soln = 0.0;
         try {
             Board estBoard = (Board) board.clone(); 
             estBoard.move(action[0], action[1], 0);
             soln += curReward;
+
             switch (board.getPiece(action[0]).getType()) {
                 case PAWN:
                     soln -= pawnPV.get(action[0]);
@@ -1039,11 +1149,11 @@ public class QLearningAgent extends Agent {
      */
     private void storeData() {
         /* return; */
-        if(turnsPlayed % 3 != 0) {
+        /* if(turnsPlayed % 3 != 0) {
             turnsPlayed++;
             return;
         }
-        turnsPlayed++;
+        turnsPlayed++; */
         switch (myColour) {
             case BLUE:
                 try {
@@ -1121,7 +1231,8 @@ public class QLearningAgent extends Agent {
      *         is the position to move that piece to.
      **/
     public Position[] playMove(Board board) {
-        if (board.getMoveCount() < 2) {
+        if (/* board.getMoveCount() <= 3 || */ !hasMoved) {
+            hasMoved = true;
             myColour = board.getTurn();
             init();
         }
@@ -1159,7 +1270,7 @@ public class QLearningAgent extends Agent {
                         System.out.printf("%s -> ", action[0].toString());
                         System.out.printf("%s\r\n", action[1].toString());
                         executeAction(action);
-                        storeData();
+                        /* storeData(); */
                         return action.clone();
                     } else if (nTimesExecuted.get(curExaminedSA) <= lowestVisitedSA) {
                         lowestVisitedSA = nTimesExecuted.get(curExaminedSA);
@@ -1173,7 +1284,7 @@ public class QLearningAgent extends Agent {
                     System.out.printf("%s -> ", action[0].toString());
                     System.out.printf("%s\r\n", action[1].toString());
                     executeAction(action);
-                    storeData();
+                    /* storeData(); */
                     return action.clone();
                 }
             }
@@ -1181,7 +1292,7 @@ public class QLearningAgent extends Agent {
             System.out.printf("%s -> ", chosenAction[0].toString());
             System.out.printf("%s\r\n", chosenAction[1].toString());
             executeAction(chosenAction);
-            storeData();
+            /* storeData(); */
             return chosenAction.clone();
         } else { // Just do it normally, be greedy and take the state-action pair that has the highest utility/value/reward
             double maxEstUtility = Double.MIN_VALUE;
@@ -1195,7 +1306,7 @@ public class QLearningAgent extends Agent {
                     if (nTimesExecuted.containsKey(curExaminedSA)) { // We have seen the state-action pair already set utility as its value
                         double estUtil = qTable.get(curExaminedSA);
                         if(estUtil == 0) {
-                            estUtil = quickUtilEstimate(board, action);
+                            estUtil = estimateUtil(board, prevRewardValue, action);
                         }
                         if (estUtil >= maxEstUtility) { // Double check when more awake
                             maxEstUtility = estUtil;
@@ -1205,7 +1316,7 @@ public class QLearningAgent extends Agent {
                     } else { // Add the new state-action pair to the q-table and set its value to 0
                         qTable.put(curExaminedSA, 0.0);
                         nTimesExecuted.put(curExaminedSA, 0);
-                        double estUtil = quickUtilEstimate(board, action);
+                        double estUtil = estimateUtil(board, prevRewardValue, action);
                         if(estUtil >= maxEstUtility) { // check when more awake
                             maxEstUtility = estUtil;
                             chosenAction[0] = action[0];
@@ -1217,7 +1328,7 @@ public class QLearningAgent extends Agent {
             System.out.printf("%s -> ", chosenAction[0].toString());
             System.out.printf("%s\r\n", chosenAction[1].toString());
             executeAction(chosenAction);
-            storeData();
+            /* storeData(); */
             return chosenAction.clone();
         }
     }
@@ -1236,6 +1347,8 @@ public class QLearningAgent extends Agent {
      * @param finalBoard the end position of the board
      **/
     public void finalBoard(Board finalBoard) {
+        System.out.println("Saving data...");
+        storeData();
     }
 
 }
