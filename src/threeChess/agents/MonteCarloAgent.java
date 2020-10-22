@@ -108,6 +108,7 @@ public class MonteCarloAgent extends Agent {
     private void expandNode() {
         //Get the player turn in the game state described by traversalNode/workingBoard
         Colour player = gameTree.getTraversalPlayer();
+        if (player != workingBoard.getTurn()) throw new RuntimeException("AAA");
         //These moves should be valid & legal
         HashSet<Position[]> availableMoves = this.getAllAvailableMoves(player);
 

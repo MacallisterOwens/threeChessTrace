@@ -101,9 +101,11 @@ public class GameTree {
      * @return true if the traversal succeeded, false otherwise
      */
     public boolean traverseBack(int steps) {
-        while (steps-- > 0) {
+        while (steps > 0) {
             if (this.traversalAtRoot()) return false;
             this.traversalNode = this.traversalNode.getParent();
+            this.traversalDepth--;
+            steps--;
         }
 
         return true;
@@ -165,11 +167,13 @@ public class GameTree {
 
     /**
      * Method that takes the result of a rollout and updates the current traversal node
+     * Note that the traversalPlayer Colour does NOT match the Colour associated with the stats at each node
+     * The Stat Colour will be the Colour prior to the traversal Colour
      * @param winner the winner of the rollout
      * @param loser the loser of the rollout
      */
     public void updateTraversal(Colour winner, Colour loser) {
-        Colour traversalPlayer = this.getTraversalPlayer();
+        Colour traversalPlayer = Colour.values()[(this.rootPlayer.ordinal() + this.traversalDepth - 1) % 3];
         if (traversalPlayer == winner) {
             this.traversalNode.rolloutUpdate(1.0);
         } else if (traversalPlayer == loser) {
