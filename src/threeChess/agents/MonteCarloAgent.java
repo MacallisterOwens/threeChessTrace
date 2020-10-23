@@ -43,7 +43,6 @@ public class MonteCarloAgent extends Agent {
         long startTime = System.nanoTime(); 
         while ( (System.nanoTime() - startTime)/1_000_000L < board.getTimeLeft(this.playerColour)/idealMoves) {
             MCTSRound(board);
-            System.out.println(++this.mcRounds + "MC rounds\r");
         }
 
         return gameTree.selectMove();
