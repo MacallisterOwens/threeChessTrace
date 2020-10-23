@@ -12,6 +12,11 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
+/**
+ * A class to represent the state-action pairs which will be stored in the
+ * qTable. Contains all board states seen and every action possible for those
+ * seen board states.
+ */
 class StateAction implements Serializable {
     /**
      * Auto generated serialVersionUID
@@ -21,6 +26,11 @@ class StateAction implements Serializable {
     Set<Position> state; // Contains all positions of all pieces
     Position[] action; // The action taken in the given state
 
+    /**
+     * Constructs a StateAction object based on the given board and action
+     * @param board the board to create the board state from
+     * @param a the action which is paired with the board state
+     */
     public StateAction(Board board, Position[] a) {
         try {
             state = new HashSet<>();
@@ -31,7 +41,6 @@ class StateAction implements Serializable {
             e.printStackTrace();
             System.out.println("Broke trying to create a state-action object... yikes");
         }
-        /* state = (HashSet<Position>) board.getPositionPieceMap().keySet(); */
         action = a;
     }
 }
@@ -57,7 +66,6 @@ public class QLearningAgent extends Agent {
     private final double dropRate = 1.0; // The rate at which the learning rate drops
     private double epsilon = 1.0; // The probability in which we choose to utilize exploration vs exploitation
 
-    private int turnsPlayed;
 
     Position[] myLastAction; // The last action *I* made
     Board prevBoardState; // The state of the board in the previous move
@@ -83,7 +91,7 @@ public class QLearningAgent extends Agent {
     /**
      * A no argument constructor, required for tournament management.
      **/
-    public QLearningAgent(double epsilonVal) {
+    public QLearningAgent() {
         myLastAction = new Position[] { null, null };
         prevBoardState = null;
         curBoardState = null;
@@ -92,7 +100,6 @@ public class QLearningAgent extends Agent {
         prevRewardValue = 0.0;
         hasMoved = false;
         myColour = null;
-        turnsPlayed = 0;
 
         pawnPV = new HashMap<Position, Double>();
         knightPV = new HashMap<Position, Double>();
@@ -103,8 +110,6 @@ public class QLearningAgent extends Agent {
 
         qTable = new HashMap<StateAction, Double>();
         nTimesExecuted = new HashMap<StateAction, Integer>();
-
-        epsilon = epsilonVal;
     }
 
     
@@ -117,31 +122,10 @@ public class QLearningAgent extends Agent {
      * Note: the reason the data is hard coded in is because for the tourny the
      * only file of ours being used is the {agent}.java file and no support/config
      * files. I'm sorry to whoever decides to read through all of the piece-position
-     * value population.
+     * value population. Note: The qTable and nTimesExecuted files are so damn big 
+     * they aren't hard coded in.
      **/
     private void init() {
-        /* myLastAction = new Position[] { null, null };
-        prevBoardState = null;
-        curBoardState = null;
-        prevReward = 0.0;
-        curReward = 0.0;
-        prevRewardValue = 0.0;
-        hasMoved = true;
-        turnsPlayed = 0;
-
-        pawnPV = new HashMap<Position, Double>();
-        knightPV = new HashMap<Position, Double>();
-        bishopPV = new HashMap<Position, Double>();
-        rookPV = new HashMap<Position, Double>();
-        queenPV = new HashMap<Position, Double>();
-        kingPV = new HashMap<Position, Double>();
-
-        qTable = new HashMap<StateAction, Double>();
-        nTimesExecuted = new HashMap<StateAction, Integer>();
-
-        epsilon = 1.0; */
-
-
         switch (myColour) {
             case BLUE:
                 try {
@@ -746,23 +730,13 @@ public class QLearningAgent extends Agent {
     }
 
     /**
-     * returns a HashMap of the position of every piece the current player has on
-     * the board mapped to a set of all possible moves
+     * Gets a set of all moves the given colour can possibly play on the given board
      * 
-     * @param board The current board state
-     * @return a HashMap mapping every pieces position to a set of valid moves
+     * @param boardState the board to be examined
+     * @param player     the player to be examined
+     * @return a set of all available moves the given player can perform on the
+     *         given board
      */
-    /* private HashMap<Position, HashSet<Position[]>> getAllAvailableMoves(Board boardState, Colour player) {
-        HashMap<Position, HashSet<Position[]>> allMoves = new HashMap<Position, HashSet<Position[]>>();
-        for (Position pos : boardState.getPositions(player)) {
-            HashSet<Position[]> moves = getAvailableMoves(boardState, pos);
-            if(!moves.isEmpty()) {
-                allMoves.put(pos, moves);
-            }
-        }
-        return allMoves;
-    } */
-
     private HashSet<Position[]> getAllAvailableMoves(Board boardState, Colour player) {
         HashSet<Position[]> allMoves = new HashSet<Position[]>();
         HashSet<Position> piecePosSet = (HashSet<Position>) boardState.getPositions(player);
@@ -792,16 +766,19 @@ public class QLearningAgent extends Agent {
      * step. Starts by favouring exploring during the early stages then transitions
      * to exploiting later on in the game
      * 
+     * In a competitive environment simply return false. If training agent, use commented out code instead
+     * 
      * @return true if we should choose exploration, otherwise false
      */
     private boolean shouldExplore() {
-        if (random.nextDouble() < epsilon) {
-            /* epsilon *= 0.95; */
+        /* if (random.nextDouble() < epsilon) {
+            epsilon *= 0.95;
             return true;
         } else {
-            /* epsilon *= 0.95; */
+            epsilon *= 0.95;
             return false;
-        }
+        } */
+        return false;
     }
 
     /**
@@ -989,6 +966,13 @@ public class QLearningAgent extends Agent {
         return val;
     }
 
+    /**
+     * Checks to see if any moves are available which result in a game win.
+     * 
+     * @param board the board to check
+     * @return the action which will win the game returns that action, otherwise
+     *         null
+     */
     private Position[] canWinGame(Board board) {
         HashSet<Position[]> availMoves = new HashSet<>();
         switch (myColour) {
@@ -1046,6 +1030,11 @@ public class QLearningAgent extends Agent {
         return null;
     }
 
+    /**
+     * Calculates the adjusted reward of being in the current state.
+     * 
+     * @return the adjust reward of being in the current state.
+     */
     private double calculateCurrentReward() {
         double curRewardValue = ( 1.105 * curBoardState.score(myColour)) + (0.95 * getPiecePositionValue(curBoardState)) + amUnderCheck(curBoardState);
         curRewardValue += (canWinGame(curBoardState) != null) ? Double.MAX_VALUE : 0;
@@ -1054,10 +1043,13 @@ public class QLearningAgent extends Agent {
         return soln;
     }
 
+    /**
+     * Sets the values before returning the action in playMove(). Using helper
+     * method to try and keep playMove() small, readable and clean.
+     * 
+     * @param action the action we are going to execute
+     */
     private void executeAction(Position[] action) {
-        /* System.out.printf("%s submits the action:", myColour.toString());
-        System.out.printf(" %s -> ", action[0].toString());
-        System.out.printf("%s\r\n", action[1].toString()); */
         myLastAction = action.clone();
         try {
             prevBoardState = (Board) curBoardState.clone(); 
@@ -1068,6 +1060,16 @@ public class QLearningAgent extends Agent {
         prevReward = curReward;
     }
 
+    /**
+     * Estimates the utility of taking the given action while on the current board
+     * 
+     * @param board         starting board state
+     * @param prevRewardVal the reward value of the previous action (in this case,
+     *                      the current reward for being in the @board position)
+     * @param action        the action to take
+     * @return the estimate of the utility for taking the given action while on the
+     *         current board state
+     */
     private double estimateUtil(Board board, double prevRewardVal, Position[] action) {
         Board mBoard = null;
         try {
@@ -1087,73 +1089,11 @@ public class QLearningAgent extends Agent {
         return estUtil;
     }
 
-    private double quickUtilEstimate(Board board, Position[] action) {
-        double soln = 0.0;
-        try {
-            Board estBoard = (Board) board.clone(); 
-            estBoard.move(action[0], action[1], 0);
-            soln += curReward;
-
-            switch (board.getPiece(action[0]).getType()) {
-                case PAWN:
-                    soln -= pawnPV.get(action[0]);
-                    soln += pawnPV.get(action[1]);
-                    soln += amUnderCheck(estBoard);
-                    break;
-                
-                case KNIGHT:
-                    soln -= knightPV.get(action[0]);
-                    soln += knightPV.get(action[1]);
-                    soln += amUnderCheck(estBoard);
-                    break;
-
-                case BISHOP:
-                    soln -= bishopPV.get(action[0]);
-                    soln += bishopPV.get(action[1]);
-                    soln += amUnderCheck(estBoard);
-                    break;
-
-                case ROOK:
-                    soln -= rookPV.get(action[0]);
-                    soln += rookPV.get(action[1]);
-                    soln += amUnderCheck(estBoard);
-                    break;
-
-                case QUEEN:
-                    soln -= queenPV.get(action[0]);
-                    soln += queenPV.get(action[1]);
-                    soln += amUnderCheck(estBoard);
-                    break;
-
-                case KING:
-                    soln -= kingPV.get(action[0]);
-                    soln += kingPV.get(action[1]);
-                    soln += amUnderCheck(estBoard);
-                    break;
-            
-                default:
-                    break;
-            }
-            return soln;
-        } catch (CloneNotSupportedException | ImpossiblePositionException | NullPointerException e) {
-            e.printStackTrace();
-            System.out.printf("A null action was passed to quickUtilEstimate.\n\r\n\r%s - %s\n\r\n\r", action[0].toString(), action[1].toString());
-            /* System.out.println("Could not clone board"); */
-            return soln;
-        }
-    }
-
     /**
      * Writes the qTable to the file qTableStorage and writes nTimesExecuted to the
      * file nTimesExecutedStorage
      */
     private void storeData() {
-        /* return; */
-        /* if(turnsPlayed % 3 != 0) {
-            turnsPlayed++;
-            return;
-        }
-        turnsPlayed++; */
         switch (myColour) {
             case BLUE:
                 try {
@@ -1231,17 +1171,46 @@ public class QLearningAgent extends Agent {
      *         is the position to move that piece to.
      **/
     public Position[] playMove(Board board) {
-        if (/* board.getMoveCount() <= 3 || */ !hasMoved) {
+        if (!hasMoved) { // First move since the agent was created
             hasMoved = true;
             myColour = board.getTurn();
             init();
+        } else if(!myColour.equals(board.getTurn())) { // A game has been completed and a new game started and our colour changed
+            myColour = board.getTurn();
+            // Reset relevant variables to default before init
+            myLastAction = new Position[] { null, null };
+            prevBoardState = null;
+            curBoardState = null;
+            prevReward = 0.0;
+            curReward = 0.0;
+            prevRewardValue = 0.0;
+
+            pawnPV = new HashMap<Position, Double>();
+            knightPV = new HashMap<Position, Double>();
+            bishopPV = new HashMap<Position, Double>();
+            rookPV = new HashMap<Position, Double>();
+            queenPV = new HashMap<Position, Double>();
+            kingPV = new HashMap<Position, Double>();
+
+            qTable = new HashMap<StateAction, Double>();
+            nTimesExecuted = new HashMap<StateAction, Integer>();
+
+            init();
+        } else if(board.getMoveCount() < 4) { // A game has been completed and a new game started but we are the same colour
+            // Reset relevant variables to default, but keep qTable, nTimesExecuted, and all piece positional value maps
+            myLastAction = new Position[] { null, null };
+            prevBoardState = null;
+            curBoardState = null;
+            prevReward = 0.0;
+            curReward = 0.0;
+            prevRewardValue = 0.0;
         }
+
         curBoardState = board;
         curReward = calculateCurrentReward();
         update();
-        if (board.gameOver()) { // This should never happen... But just in case
+        if (board.gameOver()) // This should never happen... But just in case
             return null;
-        }
 
         Position[] chosenAction = new Position[2];
         boolean set = false;
@@ -1251,7 +1220,7 @@ public class QLearningAgent extends Agent {
         if(shouldExplore()) { // If I should explore choose the state-action pair with the lowest visits, or if there is a state we haven't explored immediately choose that
             int lowestVisitedSA = Integer.MAX_VALUE;
             for (Position[] action : availMoves) {
-                if(set == false) {
+                if(set == false) { // Ensures at least one move is picked - fix for a rare bug.
                     chosenAction[0] = action[0];
                     chosenAction[1] = action[1];
                     set = true;
@@ -1266,11 +1235,7 @@ public class QLearningAgent extends Agent {
                 StateAction curExaminedSA = new StateAction(board, action);
                 if (nTimesExecuted.containsKey(curExaminedSA)) { // We have seen the state-action pair already
                     if (nTimesExecuted.get(curExaminedSA) == 0) { // Proceed using this state-action
-                        /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
-                        System.out.printf("%s -> ", action[0].toString());
-                        System.out.printf("%s\r\n", action[1].toString()); */
                         executeAction(action);
-                        /* storeData(); */
                         return action.clone();
                     } else if (nTimesExecuted.get(curExaminedSA) <= lowestVisitedSA) {
                         lowestVisitedSA = nTimesExecuted.get(curExaminedSA);
@@ -1279,22 +1244,20 @@ public class QLearningAgent extends Agent {
                 } else { // Add the new state-action pair to the q-table and set its value to 0
                     qTable.put(curExaminedSA, 0.0);
                     nTimesExecuted.put(curExaminedSA, 0);
-                    // Proceed using this state-action pair
-                    /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
-                    System.out.printf("%s -> ", action[0].toString());
-                    System.out.printf("%s\r\n", action[1].toString()); */
                     executeAction(action);
-                    /* storeData(); */
                     return action.clone();
                 }
             }
-            /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
-            System.out.printf("%s -> ", chosenAction[0].toString());
-            System.out.printf("%s\r\n", chosenAction[1].toString()); */
             executeAction(chosenAction);
-            /* storeData(); */
             return chosenAction.clone();
         } else { // Just do it normally, be greedy and take the state-action pair that has the highest utility/value/reward
+            chosenAction = canWinGame(board);
+            if(chosenAction != null) { // if we can win the game here do it
+                executeAction(chosenAction);
+                return chosenAction.clone();
+            } else {
+                chosenAction = new Position[] {null, null};
+            }
             double maxEstUtility = Double.MIN_VALUE;
                 for (Position[] action : availMoves) {
                     if(set == false) {
@@ -1308,7 +1271,7 @@ public class QLearningAgent extends Agent {
                         if(estUtil == 0) {
                             estUtil = estimateUtil(board, prevRewardValue, action);
                         }
-                        if (estUtil >= maxEstUtility) { // Double check when more awake
+                        if (estUtil >= maxEstUtility) { 
                             maxEstUtility = estUtil;
                             chosenAction[0] = action[0];
                             chosenAction[1] = action[1];
@@ -1317,18 +1280,14 @@ public class QLearningAgent extends Agent {
                         qTable.put(curExaminedSA, 0.0);
                         nTimesExecuted.put(curExaminedSA, 0);
                         double estUtil = estimateUtil(board, prevRewardValue, action);
-                        if(estUtil >= maxEstUtility) { // check when more awake
+                        if(estUtil >= maxEstUtility) {
                             maxEstUtility = estUtil;
                             chosenAction[0] = action[0];
                             chosenAction[1] = action[1];
                         }
                     }
                 }
-            /* System.out.printf("The action pair trying to be passed to  `executeAction`: ");
-            System.out.printf("%s -> ", chosenAction[0].toString());
-            System.out.printf("%s\r\n", chosenAction[1].toString()); */
             executeAction(chosenAction);
-            /* storeData(); */
             return chosenAction.clone();
         }
     }
@@ -1347,7 +1306,6 @@ public class QLearningAgent extends Agent {
      * @param finalBoard the end position of the board
      **/
     public void finalBoard(Board finalBoard) {
-        System.out.println("Saving data...");
         storeData();
     }
 
