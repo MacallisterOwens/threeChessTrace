@@ -21,7 +21,7 @@ public class MonteCarloAgent extends Agent {
     private GameTree gameTree;
 
     //Manage time effectively
-    private static final long timeLimit = 5_000_000_000L;
+    private static long idealMoves = 40L;
     private int mcRounds = 0;
 
     //Helper variable to store features of any game instance
@@ -42,8 +42,7 @@ public class MonteCarloAgent extends Agent {
         this.gameStateUpdate(board);
 
         long startTime = System.nanoTime(); 
-
-        while (System.nanoTime() - startTime < timeLimit) {
+        while ( (System.nanoTime() - startTime)/1_000_000L < board.getTimeLeft(this.playerColour)/idealMoves) {
             MCTSRound(board);
             System.out.println(++this.mcRounds + "MC rounds\r");
         }
