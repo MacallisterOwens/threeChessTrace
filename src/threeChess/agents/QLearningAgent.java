@@ -48,10 +48,12 @@ class StateAction implements Serializable {
 /**
  * This class represents a learning agent utilizing Q-Learning to play
  * three-person chess.
+ *
+ * @author: Macallister Owens - 22221724
  */
 public class QLearningAgent extends Agent {
 
-    private static final String name = "Q-Learning Agent";
+    private static final String name = "Q-Learning";
     private static final Random random = new Random();
 
     private final String qTableStorageBlue = "Q-Table-Storage-Blue"; // Q-Table-Storage file name for when the agent is BLUE
