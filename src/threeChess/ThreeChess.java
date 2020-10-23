@@ -238,7 +238,7 @@ public class ThreeChess{
    **/
   public static void main(String[] args){
     
-    Agent[] bots = {new MonteCarloAgent(), new RandomAgent(), new RandomAgent()};
+    Agent[] bots = {new MonteCarloAgent(), new CustomAgent(), new RandomAgent()};
     if(args.length > 0 && args[0].equals("manual")){
       bots = new Agent[] {new ManualAgent("A"), new ManualAgent("B"), new ManualAgent("C")};
       tournament(bots,60,0,true, null);

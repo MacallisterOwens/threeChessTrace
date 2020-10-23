@@ -2,8 +2,6 @@ package threeChess.agents;
 
 import threeChess.*;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.Map.Entry;
 
 
 public class MonteCarloAgent extends Agent {
