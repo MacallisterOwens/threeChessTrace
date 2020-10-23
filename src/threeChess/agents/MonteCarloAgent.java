@@ -8,8 +8,7 @@ import java.util.Map.Entry;
 
 public class MonteCarloAgent extends Agent {
 
-    private static final String name = "Carlos the Monty";
-    private boolean initialised; //Remember if we've initialised everything
+    private static final String name = "Carlos";
     private Board workingBoard; //board to modify while traversing the game tree to validate moves
     //Manually keep track of piece position to avoid calling getPositions()
     private HashMap<Piece, Position> redPieceLocations; 
@@ -32,15 +31,14 @@ public class MonteCarloAgent extends Agent {
     //Rollout agents
     private static final Random random = new Random();
 
-    public MonteCarloAgent() {
-        this.initialised = false;
-    }
+    //Empty constructor
+    public MonteCarloAgent() {}
 
     public Position[] playMove(Board board) {
 
         this.initPieceLocations(board);
         this.mcRounds = 0;
-        this.initialiseAgent(board);
+        if (board.getMoveCount() < 3) this.initialiseAgent(board);
         this.gameStateUpdate(board);
 
         long startTime = System.nanoTime(); 
@@ -130,8 +128,8 @@ public class MonteCarloAgent extends Agent {
 
 
         while (!workingBoard.gameOver()) {
-            Position[] move = this.fastRandomRollout(workingBoard);
-            try {workingBoard.move(move[0], move[1]);}
+            Position[] move = this.fastRandomRollout();
+            try {this.workingBoardMove(move);}
             catch (ImpossiblePositionException e) {System.out.println("DEBUG: rollout agent played illegal move");}
         }
 
@@ -197,6 +195,7 @@ public class MonteCarloAgent extends Agent {
         Position start = move[0];
         Position end = move[1];
         Piece mover = workingBoard.getPiece(start);
+        Piece captured = workingBoard.getPiece(end);
         Colour movePlayer = mover.getColour();
         HashMap<Piece, Position> playerPieceLocations = this.getPlayerPieceLocations(movePlayer);
 
@@ -205,7 +204,8 @@ public class MonteCarloAgent extends Agent {
 
         //First: check for castling
         //Borrows code form Board.java to perform the check
-        if(mover.getType()==PieceType.KING && start == this.kingHomePosition){
+        playerPieceLocations.remove(mover);
+        if (mover.getType()==PieceType.KING && start == this.kingHomePosition) {
             playerPieceLocations.put(mover, end);
             if(end.getColumn()==2) {//castle left
                 Position rookPos = Position.get(movePlayer, 0, 0);
@@ -217,21 +217,19 @@ public class MonteCarloAgent extends Agent {
                 playerPieceLocations.put(rook, Position.get(movePlayer, 0, 5));
             }
         //Second: check if the move results in a capture
-        } else if (workingBoard.getPiece(end) != null) {
-            Piece captured = workingBoard.getPiece(end);
+        } if (captured != null) {
             this.getPlayerPieceLocations(captured.getColour()).remove(captured);
-            playerPieceLocations.put(mover, end);
-        //Finally: check for a promotion
-        } if (mover.getType() == PieceType.PAWN && end.getRow() == 0) {
-            playerPieceLocations.remove(mover);
-            playerPieceLocations.put(new Piece(PieceType.QUEEN, playerColour), end);
+        } if (mover.getType() == PieceType.PAWN && end.getRow() == 0 && end.getColour() != movePlayer) {
+            //Need to move first to ensure that the piece object stored in the hashmap
+            //is identical to the one created in workingBoard
+            this.workingBoard.move(start, end);
+            playerPieceLocations.put(this.workingBoard.getPiece(end), end);
         } else {
             //Normal move
             playerPieceLocations.put(mover, end);
+            //Now play move
+            this.workingBoard.move(start, end);
         }
-
-        //Now play move
-        this.workingBoard.move(start, end);
 
     }
 
@@ -299,7 +297,7 @@ public class MonteCarloAgent extends Agent {
 
         for (int i = 1; i <= moverType.getStepReps(); i++) { //iterate that step as many times as possible to check every possible move
             try { //try the move
-                p = this.workingBoard.step(mover, moves, p);
+                p = this.workingBoard.step(mover, moves, p, position.getColour() != p.getColour());
                 if (this.workingBoard.isLegalMove(position, p)) possibleMoves.add(new Position[] {position, p}); //move is good, add it to the list
             } catch(ImpossiblePositionException e) { 
                 break; //ended up in an illegal position, abandon that step and try another
@@ -372,15 +370,12 @@ public class MonteCarloAgent extends Agent {
      * @param board the initial board to use for initialisation
      */
     private void initialiseAgent(Board board) {
-        if (initialised) return;
 
         this.playerColour = board.getTurn();
         this.resetWorkingBoard(board);
         this.resetWorkingPieceLocations();
         this.kingHomePosition = this.getKingHome(this.playerColour);
         this.initGameTree();
-
-        this.initialised = true;
 
     }
 
@@ -391,7 +386,6 @@ public class MonteCarloAgent extends Agent {
     private void gameStateUpdate(Board board) {
 
         this.resetWorkingBoard(board);
-        this.initPieceLocations(board);
         this.resetWorkingPieceLocations();
 
         int m = board.getMoveCount();
@@ -421,25 +415,22 @@ public class MonteCarloAgent extends Agent {
 
     //Rollout Agents
 
-    public Position[] fastRandomRollout(Board board) {
+    public Position[] fastRandomRollout() {
         //Position[] pieces = this.getPlayerPieceLocations(board.getTurn()).values().toArray(new Position[0]);
-        Position[] pieces = board.getPositions(board.getTurn()).toArray(new Position[0]);
+        Position[] pieces = this.getPlayerPieceLocations(this.workingBoard.getTurn()).values().toArray(new Position[0]);
         Position start = pieces[0];
         Position end = pieces[0]; //dummy illegal move
 
-        while (!board.isLegalMove(start, end)) {
+        while (!this.workingBoard.isLegalMove(start, end)) {
             start = pieces[random.nextInt(pieces.length)];
-            Piece mover = board.getPiece(start);
-            if (mover == null) {
-                mover = null;
-            }
+            Piece mover = this.workingBoard.getPiece(start);
             Direction[][] steps = mover.getType().getSteps();
             Direction[] step = steps[random.nextInt(steps.length)];
             int reps = 1 + random.nextInt(mover.getType().getStepReps());
             end = start;
             try {
             for (int i = 0; i<reps; i++)
-                end = board.step(mover, step, end, start.getColour()!=end.getColour());
+                end = this.workingBoard.step(mover, step, end, start.getColour()!=end.getColour());
             } catch(ImpossiblePositionException e){}
         }
 

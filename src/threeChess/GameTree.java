@@ -173,7 +173,9 @@ public class GameTree {
      * @param loser the loser of the rollout
      */
     public void updateTraversal(Colour winner, Colour loser) {
-        Colour traversalPlayer = Colour.values()[(this.rootPlayer.ordinal() + this.traversalDepth - 1) % 3];
+        //Some sneaky math to get the Colour of the move that leads to the current traversal node
+        //Also avoid a negative index if its the first move and we're at the root
+        Colour traversalPlayer = Colour.values()[(3 + this.rootPlayer.ordinal() + this.traversalDepth - 1) % 3];
         if (traversalPlayer == winner) {
             this.traversalNode.rolloutUpdate(1.0);
         } else if (traversalPlayer == loser) {
