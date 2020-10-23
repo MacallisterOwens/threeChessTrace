@@ -3,6 +3,12 @@ An AI framework for playing three player chess, as part of the CITS3001 unit at 
 
 # Project
 
+## Instructions on how to run the QLearningAgent
+Step 1: unzip the file `qTableAndnTimesExecuted.zip`
+Step 2: Start a game/tournament as you normally would
+
+Note: Your system did not freeze, it is simply loading in the persistant files and can take upwards of 30s.
+
 ## Three Chess
 
 ![](init.png)
